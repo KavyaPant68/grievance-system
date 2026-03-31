@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Submit Complaint — GrievanceIQ{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .submit-wrapper {
+        max-width: 680px;
+        margin: 2.5rem auto;
+        padding: 0 1rem;
+    }
+
+    .ai-info {
+        background: linear-gradient(135deg, #e0f2fe, #ede9fe);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.75rem;
+        font-size: .88rem;
+        color: #1e3a5f;
+        display: flex;
+        gap: .75rem;
+        align-items: flex-start;
+    }
+
+    .ai-info .icon { font-size: 1.3rem; flex-shrink: 0; }
+
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: .75rem;
+        margin-top: .5rem;
+    }
+
+    .category-option { display: none; }
+
+    .category-label {
+        display: block;
+        padding: .9rem;
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all .2s;
+        background: var(--white);
+    }
+
+    .category-label .cat-icon { font-size: 1.6rem; display: block; margin-bottom: .3rem; }
+    .category-label .cat-name { font-size: .88rem; font-weight: 600; color: var(--ink); }
+
+    .category-option:checked + .category-label {
+        border-color: var(--accent2);
+        background: #e8f4fd;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: .9rem;
+        background: var(--ink);
+        color: var(--white);
+        border: none;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        margin-top: .5rem;
+        transition: background .2s;
+    }
+
+    .submit-btn:hover { background: #2d2d4a; }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        color: var(--ink-soft);
+        text-decoration: none;
+        font-size: .9rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .back-link:hover { color: var(--ink); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="submit-wrapper">
+    <a href="{{ url_for('student_dashboard') }}" class="back-link">← Back to Dashboard</a>
+
+    <h1 class="page-title">Submit a Complaint</h1>
+    <p class="page-subtitle">Fill in the details below. Our AI will verify the category automatically.</p>
+
+    <div class="ai-info">
+        <span class="icon">🤖</span>
+        <div>
+            <strong>AI-Powered Verification:</strong> Our system analyses your complaint text
+            using keyword matching and verifies whether the category you selected is correct.
+            If there's a mismatch, the admin will review it.
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('submit_complaint') }}">
+
+                <div class="form-group">
+                    <label for="title">Complaint Title</label>
+                    <input type="text" id="title" name="title"
+                           placeholder="e.g. WiFi not working in hostel block B"
+                           required maxlength="150">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Detailed Description</label>
+                    <textarea id="description" name="description"
+                              placeholder="Describe your issue in detail. Include when it started, how it affects you, and any steps already taken..."
+                              required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Select Category</label>
+                    <div class="category-grid">
+                        <div>
+                            <input type="radio" name="category" id="cat-hostel"
+                                   class="category-option" value="Hostel" required>
+                            <label for="cat-hostel" class="category-label">
+                                <span class="cat-icon">🏠</span>
+                                <span class="cat-name">Hostel</span>
+                            </label>
+                        </div>
+                        <div>
+                            <input type="radio" name="category" id="cat-it"
+                                   class="category-option" value="IT">
+                            <label for="cat-it" class="category-label">
+                                <span class="cat-icon">💻</span>
+                                <span class="cat-name">IT / Tech</span>
+                            </label>
+                        </div>
+                        <div>
+                            <input type="radio" name="category" id="cat-academic"
+                                   class="category-option" value="Academic">
+                            <label for="cat-academic" class="category-label">
+                                <span class="cat-icon">📚</span>
+                                <span class="cat-name">Academic</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    Submit Complaint →
+                </button>
+
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

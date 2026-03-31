@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Sign Up — GrievanceIQ{% endblock %}
+
+{% block extra_styles %}
+<style>
+    body { display: flex; flex-direction: column; }
+
+    .auth-wrapper {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        min-height: calc(100vh - 60px);
+    }
+
+    .auth-box { width: 100%; max-width: 420px; }
+
+    .auth-logo {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .auth-logo h1 {
+        font-family: 'DM Serif Display', serif;
+        font-size: 2rem;
+        color: var(--ink);
+    }
+
+    .auth-logo h1 span { color: var(--accent); }
+    .auth-logo p { color: var(--ink-soft); font-size: .9rem; margin-top: .25rem; }
+
+    .auth-card {
+        background: var(--white);
+        border-radius: 16px;
+        padding: 2.25rem 2rem;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+    }
+
+    .auth-card h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 1.5rem; }
+
+    .auth-submit {
+        width: 100%;
+        padding: .8rem;
+        background: var(--accent);
+        color: var(--white);
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: 'DM Sans', sans-serif;
+        margin-top: .5rem;
+        transition: background .2s;
+    }
+
+    .auth-submit:hover { background: #c1121f; }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.25rem;
+        font-size: .88rem;
+        color: var(--ink-soft);
+    }
+
+    .auth-footer a { color: var(--accent2); font-weight: 600; text-decoration: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-box">
+        <div class="auth-logo">
+            <h1>Grievance<span>IQ</span></h1>
+            <p>Create your student account</p>
+        </div>
+
+        <div class="auth-card">
+            <h2>Create an account 🎓</h2>
+
+            <form method="POST" action="{{ url_for('signup') }}">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name"
+                           placeholder="e.g. Kavya Pant" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">College Email</label>
+                    <input type="email" id="email" name="email"
+                           placeholder="you@college.edu" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password"
+                           placeholder="Choose a strong password" required>
+                </div>
+
+                <button type="submit" class="auth-submit">Create Account →</button>
+            </form>
+
+            <div class="auth-footer">
+                Already have an account?
+                <a href="{{ url_for('login') }}">Login here</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — GrievanceIQ{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .filter-bar {
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1rem 1.5rem;
+        display: flex;
+        gap: 1rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .filter-group { display: flex; flex-direction: column; gap: .3rem; min-width: 160px; }
+    .filter-group label { font-size: .8rem; font-weight: 600; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .5px; }
+    .filter-group select { padding: .5rem .75rem; font-size: .9rem; }
+
+    .status-form { display: inline-flex; gap: .5rem; align-items: center; }
+    .status-form select { padding: .3rem .5rem; font-size: .82rem; border-radius: 6px; }
+
+    .ai-badge-wrap { display: flex; flex-direction: column; gap: .25rem; }
+
+    .mismatch-row td { background: #fffbeb; }
+
+    .admin-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: .25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+    <div class="admin-title-row">
+        <div>
+            <h1 class="page-title">Admin Dashboard</h1>
+            <p class="page-subtitle">Manage and resolve all student complaints.</p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card stat-total">
+            <div class="number">{{ stats.Total }}</div>
+            <div class="label">Total Complaints</div>
+        </div>
+        <div class="stat-card stat-pending">
+            <div class="number">{{ stats.Pending }}</div>
+            <div class="label">Pending</div>
+        </div>
+        <div class="stat-card stat-progress">
+            <div class="number">{{ stats['In Progress'] }}</div>
+            <div class="label">In Progress</div>
+        </div>
+        <div class="stat-card stat-resolved">
+            <div class="number">{{ stats.Resolved }}</div>
+            <div class="label">Resolved</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <form method="GET" action="{{ url_for('filter_complaints') }}">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Department</label>
+                <select name="category">
+                    <option value="">All Departments</option>
+                    <option value="Hostel"   {% if selected_category=='Hostel'   %}selected{% endif %}>🏠 Hostel</option>
+                    <option value="IT"       {% if selected_category=='IT'       %}selected{% endif %}>💻 IT</option>
+                    <option value="Academic" {% if selected_category=='Academic' %}selected{% endif %}>📚 Academic</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select name="status">
+                    <option value="">All Statuses</option>
+                    <option value="Pending"     {% if selected_status=='Pending'     %}selected{% endif %}>⏳ Pending</option>
+                    <option value="In Progress" {% if selected_status=='In Progress' %}selected{% endif %}>🔄 In Progress</option>
+                    <option value="Resolved"    {% if selected_status=='Resolved'    %}selected{% endif %}>✅ Resolved</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Apply Filter</button>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline btn-sm">Clear</a>
+        </div>
+    </form>
+
+    <!-- Complaints Table -->
+    <div class="card">
+        <div class="card-header">
+            <span style="font-weight:600;">
+                All Complaints
+                {% if selected_category or selected_status %}
+                    <span style="color:var(--accent); font-size:.85rem;"> — filtered</span>
+                {% endif %}
+            </span>
+            <span style="color:var(--ink-soft); font-size:.85rem;">{{ complaints | length }} records</span>
+        </div>
+
+        {% if complaints %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Complaint</th>
+                        <th>Category</th>
+                        <th>AI Verified</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in complaints %}
+                    <tr {% if c.category != c.ai_category %}class="mismatch-row"{% endif %}>
+                        <td style="color:var(--ink-soft); font-size:.85rem;">{{ c.id }}</td>
+                        <td>
+                            <strong style="font-size:.9rem;">{{ c.student_name }}</strong>
+                            <div style="font-size:.78rem; color:var(--ink-soft);">{{ c.student_email }}</div>
+                        </td>
+                        <td style="max-width:220px;">
+                            <strong style="font-size:.88rem;">{{ c.title }}</strong>
+                            <div style="font-size:.78rem; color:var(--ink-soft); margin-top:.15rem;">
+                                {{ c.description[:70] }}{% if c.description|length > 70 %}…{% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ c.category | lower }}">{{ c.category }}</span>
+                        </td>
+                        <td>
+                            <div class="ai-badge-wrap">
+                                <span class="badge badge-{{ c.ai_category | lower }}">{{ c.ai_category }}</span>
+                                {% if c.category != c.ai_category %}
+                                    <span style="font-size:.7rem; color:#856404;">⚠️ Category mismatch</span>
+                                {% else %}
+                                    <span style="font-size:.7rem; color:#065f46;">✓ Verified</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if c.status == 'Pending' %}
+                                <span class="badge badge-pending">⏳ Pending</span>
+                            {% elif c.status == 'In Progress' %}
+                                <span class="badge badge-progress">🔄 In Progress</span>
+                            {% else %}
+                                <span class="badge badge-resolved">✅ Resolved</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size:.8rem; color:var(--ink-soft);">{{ c.submitted_at }}</td>
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('update_status', complaint_id=c.id) }}"
+                                  class="status-form">
+                                <select name="status">
+                                    <option {% if c.status=='Pending'     %}selected{% endif %}>Pending</option>
+                                    <option {% if c.status=='In Progress' %}selected{% endif %}>In Progress</option>
+                                    <option {% if c.status=='Resolved'    %}selected{% endif %}>Resolved</option>
+                                </select>
+                                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="icon">📭</div>
+            <p>No complaints found for the selected filter.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

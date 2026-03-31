@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}My Complaints — GrievanceIQ{% endblock %}
+
+{% block content %}
+<div class="page">
+
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: .25rem;">
+        <div>
+            <h1 class="page-title">Hello, {{ session.user_name }} 👋</h1>
+            <p class="page-subtitle">Track all your submitted complaints below.</p>
+        </div>
+        <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent">
+            + New Complaint
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card stat-total">
+            <div class="number">{{ complaints | length }}</div>
+            <div class="label">Total Submitted</div>
+        </div>
+        <div class="stat-card stat-pending">
+            <div class="number">{{ stats.Pending }}</div>
+            <div class="label">Pending</div>
+        </div>
+        <div class="stat-card stat-progress">
+            <div class="number">{{ stats['In Progress'] }}</div>
+            <div class="label">In Progress</div>
+        </div>
+        <div class="stat-card stat-resolved">
+            <div class="number">{{ stats.Resolved }}</div>
+            <div class="label">Resolved</div>
+        </div>
+    </div>
+
+    <!-- Complaints Table -->
+    <div class="card">
+        <div class="card-header">
+            <span style="font-weight:600;">Your Complaints</span>
+        </div>
+
+        {% if complaints %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Title</th>
+                        <th>You Selected</th>
+                        <th>AI Suggested</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in complaints %}
+                    <tr>
+                        <td style="color:var(--ink-soft); font-size:.85rem;">{{ c.id }}</td>
+                        <td>
+                            <strong>{{ c.title }}</strong>
+                            <div style="font-size:.82rem; color:var(--ink-soft); margin-top:.2rem;">
+                                {{ c.description[:80] }}{% if c.description|length > 80 %}…{% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ c.category | lower }}">
+                                {{ c.category }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ c.ai_category | lower }}
+                                {% if c.category != c.ai_category %} badge-mismatch{% endif %}">
+                                {{ c.ai_category }}
+                                {% if c.category != c.ai_category %}⚠️{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if c.status == 'Pending' %}
+                                <span class="badge badge-pending">⏳ Pending</span>
+                            {% elif c.status == 'In Progress' %}
+                                <span class="badge badge-progress">🔄 In Progress</span>
+                            {% else %}
+                                <span class="badge badge-resolved">✅ Resolved</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size:.85rem; color:var(--ink-soft);">{{ c.submitted_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="icon">📭</div>
+            <p>No complaints yet. Submit your first complaint!</p>
+            <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent" style="margin-top:1rem;">
+                Submit a Complaint
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
