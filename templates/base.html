@@ -6,7 +6,6 @@
     <title>{% block title %}GrievanceIQ{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        /* ── RESET & BASE ── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
@@ -23,272 +22,117 @@
             --radius:   12px;
         }
 
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--surface);
-            color: var(--ink);
-            min-height: 100vh;
-            line-height: 1.6;
-        }
+        body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); min-height: 100vh; line-height: 1.6; }
 
-        /* ── NAVBAR ── */
-        nav {
-            background: var(--ink);
-            padding: 0 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 60px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .nav-brand {
-            font-family: 'DM Serif Display', serif;
-            font-size: 1.4rem;
-            color: var(--white);
-            text-decoration: none;
-            letter-spacing: .5px;
-        }
-
+        /* NAV */
+        nav { background: var(--ink); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
+        .nav-brand { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: var(--white); text-decoration: none; }
         .nav-brand span { color: var(--accent); }
-
+        .nav-dept-tag { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); font-size: .75rem; padding: .2rem .6rem; border-radius: 10px; margin-left: .6rem; font-weight: 500; }
         .nav-links { display: flex; gap: 1.5rem; align-items: center; }
-
-        .nav-links a {
-            color: rgba(255,255,255,.75);
-            text-decoration: none;
-            font-size: .9rem;
-            font-weight: 500;
-            transition: color .2s;
-        }
-
+        .nav-links a { color: rgba(255,255,255,.75); text-decoration: none; font-size: .9rem; font-weight: 500; transition: color .2s; }
         .nav-links a:hover { color: var(--white); }
+        .nav-pill { background: var(--accent); color: var(--white) !important; padding: .3rem .9rem; border-radius: 20px; font-size: .85rem !important; }
 
-        .nav-pill {
-            background: var(--accent);
-            color: var(--white) !important;
-            padding: .3rem .9rem;
-            border-radius: 20px;
-            font-size: .85rem !important;
-        }
-
-        /* ── FLASH MESSAGES ── */
+        /* FLASH */
         .flash-container { padding: .75rem 2rem 0; }
-
-        .flash {
-            padding: .75rem 1.25rem;
-            border-radius: var(--radius);
-            font-size: .9rem;
-            font-weight: 500;
-            margin-bottom: .5rem;
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-        }
-
+        .flash { padding: .75rem 1.25rem; border-radius: var(--radius); font-size: .9rem; font-weight: 500; margin-bottom: .5rem; }
         .flash.success { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
         .flash.error   { background: #fee2e2; color: #991b1b; border-left: 4px solid var(--accent); }
         .flash.warning { background: #fff3cd; color: #856404; border-left: 4px solid var(--warn); }
         .flash.info    { background: #dbeafe; color: #1e40af; border-left: 4px solid var(--accent2); }
 
-        /* ── PAGE WRAPPER ── */
+        /* PAGE */
         .page { padding: 2rem; max-width: 1200px; margin: 0 auto; }
 
-        /* ── CARDS ── */
-        .card {
-            background: var(--white);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-        }
-
-        .card-header {
-            padding: 1.25rem 1.75rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
+        /* CARD */
+        .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .card-header { padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
         .card-body { padding: 1.75rem; }
 
-        /* ── STATS GRID ── */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: var(--white);
-            border-radius: var(--radius);
-            padding: 1.25rem 1.5rem;
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
-        }
-
-        .stat-card .number {
-            font-family: 'DM Serif Display', serif;
-            font-size: 2.2rem;
-            line-height: 1;
-        }
-
-        .stat-card .label {
-            font-size: .8rem;
-            color: var(--ink-soft);
-            margin-top: .25rem;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-        }
-
+        /* STATS */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: var(--white); border-radius: var(--radius); padding: 1.25rem 1.5rem; border: 1px solid var(--border); box-shadow: var(--shadow); }
+        .stat-card .number { font-family: 'DM Serif Display', serif; font-size: 2.2rem; line-height: 1; }
+        .stat-card .label { font-size: .8rem; color: var(--ink-soft); margin-top: .25rem; text-transform: uppercase; letter-spacing: .5px; }
         .stat-pending  .number { color: var(--warn); }
         .stat-progress .number { color: var(--accent2); }
         .stat-resolved .number { color: var(--accent3); }
         .stat-total    .number { color: var(--ink); }
 
-        /* ── TABLE ── */
+        /* TABLE */
         .table-wrap { overflow-x: auto; }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: .9rem;
-        }
-
-        th {
-            background: var(--surface);
-            padding: .75rem 1rem;
-            text-align: left;
-            font-weight: 600;
-            font-size: .8rem;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            color: var(--ink-soft);
-            border-bottom: 2px solid var(--border);
-        }
-
-        td {
-            padding: .9rem 1rem;
-            border-bottom: 1px solid var(--border);
-            vertical-align: middle;
-        }
-
+        table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+        th { background: var(--surface); padding: .75rem 1rem; text-align: left; font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-soft); border-bottom: 2px solid var(--border); }
+        td { padding: .9rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: #fafaf8; }
 
-        /* ── BADGES ── */
-        .badge {
-            display: inline-block;
-            padding: .25rem .7rem;
-            border-radius: 20px;
-            font-size: .78rem;
-            font-weight: 600;
-        }
+        /* BADGES */
+        .badge { display: inline-block; padding: .25rem .7rem; border-radius: 20px; font-size: .78rem; font-weight: 600; }
+        .badge-pending   { background: #fff3cd; color: #856404; }
+        .badge-progress  { background: #dbeafe; color: #1e40af; }
+        .badge-resolved  { background: #d1fae5; color: #065f46; }
+        .badge-hostel    { background: #ede9fe; color: #5b21b6; }
+        .badge-it        { background: #cffafe; color: #155e75; }
+        .badge-academic  { background: #fee2e2; color: #991b1b; }
+        .badge-library   { background: #fef9c3; color: #713f12; }
+        .badge-transport { background: #dcfce7; color: #14532d; }
+        .badge-finance   { background: #fce7f3; color: #831843; }
+        .badge-general   { background: #f1f5f9; color: #334155; }
+        .badge-other     { background: #f1f5f9; color: #334155; }
+        .badge-mismatch  { background: #fff3cd; color: #856404; }
 
-        .badge-pending  { background: #fff3cd; color: #856404; }
-        .badge-progress { background: #dbeafe; color: #1e40af; }
-        .badge-resolved { background: #d1fae5; color: #065f46; }
-        .badge-hostel   { background: #ede9fe; color: #5b21b6; }
-        .badge-it       { background: #cffafe; color: #155e75; }
-        .badge-academic { background: #fee2e2; color: #991b1b; }
-        .badge-mismatch { background: #fff3cd; color: #856404; }
-
-        /* ── BUTTONS ── */
-        .btn {
-            display: inline-block;
-            padding: .55rem 1.25rem;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-family: 'DM Sans', sans-serif;
-            font-size: .9rem;
-            font-weight: 600;
-            text-decoration: none;
-            transition: opacity .15s, transform .1s;
-        }
-
+        /* BUTTONS */
+        .btn { display: inline-block; padding: .55rem 1.25rem; border-radius: 8px; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: .9rem; font-weight: 600; text-decoration: none; transition: opacity .15s, transform .1s; }
         .btn:active { transform: scale(.97); }
         .btn:hover  { opacity: .88; }
+        .btn-primary { background: var(--ink); color: var(--white); }
+        .btn-accent  { background: var(--accent); color: var(--white); }
+        .btn-outline { background: transparent; color: var(--ink); border: 1.5px solid var(--border); }
+        .btn-sm { padding: .3rem .8rem; font-size: .82rem; }
 
-        .btn-primary   { background: var(--ink); color: var(--white); }
-        .btn-accent    { background: var(--accent); color: var(--white); }
-        .btn-outline   { background: transparent; color: var(--ink); border: 1.5px solid var(--border); }
-        .btn-sm        { padding: .3rem .8rem; font-size: .82rem; }
-
-        /* ── FORMS ── */
+        /* FORMS */
         .form-group { margin-bottom: 1.25rem; }
-
-        label {
-            display: block;
-            font-size: .88rem;
-            font-weight: 600;
-            margin-bottom: .4rem;
-            color: var(--ink);
+        label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: .4rem; }
+        input[type="text"], input[type="email"], input[type="password"], textarea, select {
+            width: 100%; padding: .7rem 1rem; border: 1.5px solid var(--border); border-radius: 8px;
+            font-family: 'DM Sans', sans-serif; font-size: .95rem; background: var(--white); color: var(--ink);
+            transition: border-color .2s, box-shadow .2s; outline: none;
         }
-
-        input[type="text"],
-        input[type="email"],
-        input[type="password"],
-        textarea,
-        select {
-            width: 100%;
-            padding: .7rem 1rem;
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: .95rem;
-            background: var(--white);
-            color: var(--ink);
-            transition: border-color .2s, box-shadow .2s;
-            outline: none;
-        }
-
-        input:focus, textarea:focus, select:focus {
-            border-color: var(--accent2);
-            box-shadow: 0 0 0 3px rgba(69,123,157,.12);
-        }
-
+        input:focus, textarea:focus, select:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(69,123,157,.12); }
         textarea { resize: vertical; min-height: 110px; }
 
-        /* ── PAGE TITLE ── */
-        .page-title {
-            font-family: 'DM Serif Display', serif;
-            font-size: 1.8rem;
-            color: var(--ink);
-            margin-bottom: .25rem;
-        }
+        /* TITLES */
+        .page-title { font-family: 'DM Serif Display', serif; font-size: 1.8rem; color: var(--ink); margin-bottom: .25rem; }
+        .page-subtitle { color: var(--ink-soft); font-size: .95rem; margin-bottom: 1.75rem; }
 
-        .page-subtitle {
-            color: var(--ink-soft);
-            font-size: .95rem;
-            margin-bottom: 1.75rem;
-        }
-
-        /* ── EMPTY STATE ── */
-        .empty-state {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: var(--ink-soft);
-        }
-
+        /* EMPTY */
+        .empty-state { text-align: center; padding: 3rem 2rem; color: var(--ink-soft); }
         .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
-        .empty-state p { font-size: 1rem; }
     </style>
     {% block extra_styles %}{% endblock %}
 </head>
 <body>
 
 <nav>
-    <a class="nav-brand" href="#">Grievance<span>IQ</span></a>
+    <div style="display:flex; align-items:center;">
+        <a class="nav-brand" href="#">Grievance<span>IQ</span></a>
+        {% if session.user_department %}
+            <span class="nav-dept-tag">
+                {{ departments[session.user_department].icon }}
+                {{ departments[session.user_department].label }}
+            </span>
+        {% elif session.user_role == 'superadmin' %}
+            <span class="nav-dept-tag">⭐ Super Admin</span>
+        {% endif %}
+    </div>
     <div class="nav-links">
         {% if session.user_role == 'student' %}
             <a href="{{ url_for('student_dashboard') }}">My Complaints</a>
-            <a href="{{ url_for('submit_complaint') }}">Submit</a>
+            <a href="{{ url_for('submit_complaint') }}">+ Submit</a>
             <a href="{{ url_for('logout') }}" class="nav-pill">Logout</a>
-        {% elif session.user_role == 'admin' %}
+        {% elif session.user_role in ('admin', 'superadmin') %}
             <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
             <a href="{{ url_for('logout') }}" class="nav-pill">Logout</a>
         {% else %}
@@ -307,6 +151,5 @@
 </div>
 
 {% block content %}{% endblock %}
-
 </body>
 </html>

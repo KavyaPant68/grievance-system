@@ -4,97 +4,38 @@
 {% block extra_styles %}
 <style>
     body { display: flex; flex-direction: column; }
+    .auth-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; min-height: calc(100vh - 60px); gap: 2.5rem; flex-wrap: wrap; }
 
-    .auth-wrapper {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-        min-height: calc(100vh - 60px);
-    }
+    .auth-box { width: 100%; max-width: 420px; }
 
-    .auth-box {
-        width: 100%;
-        max-width: 420px;
-    }
-
-    .auth-logo {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-
-    .auth-logo h1 {
-        font-family: 'DM Serif Display', serif;
-        font-size: 2rem;
-        color: var(--ink);
-    }
-
+    .auth-logo { text-align: center; margin-bottom: 2rem; }
+    .auth-logo h1 { font-family: 'DM Serif Display', serif; font-size: 2rem; color: var(--ink); }
     .auth-logo h1 span { color: var(--accent); }
+    .auth-logo p { color: var(--ink-soft); font-size: .9rem; margin-top: .25rem; }
 
-    .auth-logo p {
-        color: var(--ink-soft);
-        font-size: .9rem;
-        margin-top: .25rem;
-    }
+    .auth-card { background: var(--white); border-radius: 16px; padding: 2.25rem 2rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .auth-card h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 1.5rem; }
 
-    .auth-card {
-        background: var(--white);
-        border-radius: 16px;
-        padding: 2.25rem 2rem;
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-    }
-
-    .auth-card h2 {
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-        color: var(--ink);
-    }
-
-    .auth-submit {
-        width: 100%;
-        padding: .8rem;
-        background: var(--ink);
-        color: var(--white);
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        font-family: 'DM Sans', sans-serif;
-        margin-top: .5rem;
-        transition: background .2s;
-    }
-
+    .auth-submit { width: 100%; padding: .8rem; background: var(--ink); color: var(--white); border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: .5rem; transition: background .2s; }
     .auth-submit:hover { background: #2d2d4a; }
 
-    .auth-footer {
-        text-align: center;
-        margin-top: 1.25rem;
-        font-size: .88rem;
-        color: var(--ink-soft);
-    }
-
+    .auth-footer { text-align: center; margin-top: 1.25rem; font-size: .88rem; color: var(--ink-soft); }
     .auth-footer a { color: var(--accent2); font-weight: 600; text-decoration: none; }
 
-    .demo-info {
-        background: #f0f7ff;
-        border: 1px solid #c7dfff;
-        border-radius: 8px;
-        padding: .9rem 1rem;
-        margin-bottom: 1.5rem;
-        font-size: .85rem;
-        color: #1e40af;
-    }
-
-    .demo-info strong { display: block; margin-bottom: .25rem; }
+    /* Reference card on the side */
+    .ref-card { width: 100%; max-width: 320px; background: var(--white); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border); box-shadow: var(--shadow); }
+    .ref-card h3 { font-size: .95rem; font-weight: 700; margin-bottom: 1rem; color: var(--ink); }
+    .ref-row { display: flex; justify-content: space-between; align-items: center; padding: .45rem 0; border-bottom: 1px solid var(--border); font-size: .82rem; }
+    .ref-row:last-child { border-bottom: none; }
+    .ref-dept { display: flex; align-items: center; gap: .4rem; font-weight: 500; color: var(--ink); }
+    .ref-cred { color: var(--ink-soft); font-family: monospace; font-size: .78rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="auth-wrapper">
+
+    <!-- Login form -->
     <div class="auth-box">
         <div class="auth-logo">
             <h1>Grievance<span>IQ</span></h1>
@@ -103,33 +44,60 @@
 
         <div class="auth-card">
             <h2>Welcome back 👋</h2>
-
-            <div class="demo-info">
-                <strong>🔑 Demo Admin Account</strong>
-                Email: admin@college.edu &nbsp;|&nbsp; Password: admin123
-            </div>
-
             <form method="POST" action="{{ url_for('login') }}">
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email"
-                           placeholder="you@college.edu" required>
+                    <input type="email" id="email" name="email" placeholder="you@college.edu" required>
                 </div>
-
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password"
-                           placeholder="Enter your password" required>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required>
                 </div>
-
                 <button type="submit" class="auth-submit">Login →</button>
             </form>
-
             <div class="auth-footer">
-                Don't have an account?
-                <a href="{{ url_for('signup') }}">Sign up here</a>
+                New student? <a href="{{ url_for('signup') }}">Create an account</a>
             </div>
         </div>
     </div>
+
+    <!-- Demo credentials reference -->
+    <div class="ref-card">
+        <h3>🔑 Demo Login Accounts</h3>
+
+        <div class="ref-row">
+            <span class="ref-dept">⭐ Super Admin</span>
+            <span class="ref-cred">admin@college.edu / admin123</span>
+        </div>
+        <div class="ref-row">
+            <span class="ref-dept">🏠 Warden</span>
+            <span class="ref-cred">warden@college.edu / warden123</span>
+        </div>
+        <div class="ref-row">
+            <span class="ref-dept">💻 IT Dept</span>
+            <span class="ref-cred">it@college.edu / it123</span>
+        </div>
+        <div class="ref-row">
+            <span class="ref-dept">📚 Academic</span>
+            <span class="ref-cred">academic@college.edu / academic123</span>
+        </div>
+        <div class="ref-row">
+            <span class="ref-dept">📖 Library</span>
+            <span class="ref-cred">library@college.edu / library123</span>
+        </div>
+        <div class="ref-row">
+            <span class="ref-dept">🚌 Transport</span>
+            <span class="ref-cred">transport@college.edu / transport123</span>
+        </div>
+        <div class="ref-row">
+            <span class="ref-dept">💰 Finance</span>
+            <span class="ref-cred">finance@college.edu / finance123</span>
+        </div>
+        <div class="ref-row" style="border-top: 1.5px solid var(--border); margin-top:.5rem; padding-top:.75rem;">
+            <span class="ref-dept" style="color:var(--ink-soft);">🎓 Students</span>
+            <span class="ref-cred">Sign up to create account</span>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
