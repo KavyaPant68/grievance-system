@@ -1,103 +1,36 @@
+"""
+app.py — GrievanceIQ Backend
+────────────────────────────
+Run AFTER training the model:
+    1.  python train_model.py     (once)
+    2.  python app.py             (every time to start the server)
+"""
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from datetime import datetime
+from ai_classifier import classify   # ← new ML-based classifier
 
 app = Flask(__name__)
 app.secret_key = 'grievance_secret_key_2024'
 
 # ─────────────────────────────────────────────
 # DEPARTMENT CONFIGURATION
-# Central place to manage all departments.
-# To add a new department, just add it here.
 # ─────────────────────────────────────────────
 
 DEPARTMENTS = {
-    'Hostel':    {'label': 'Hostel / Warden',    'icon': '🏠', 'email': 'warden@college.edu',    'password': 'warden123'},
-    'IT':        {'label': 'IT Department',       'icon': '💻', 'email': 'it@college.edu',         'password': 'it123'},
-    'Academic':  {'label': 'Academic / Exam Cell','icon': '📚', 'email': 'academic@college.edu',   'password': 'academic123'},
-    'Library':   {'label': 'Library',             'icon': '📖', 'email': 'library@college.edu',    'password': 'library123'},
-    'Transport': {'label': 'Transport',           'icon': '🚌', 'email': 'transport@college.edu',  'password': 'transport123'},
-    'Finance':   {'label': 'Finance / Fees',      'icon': '💰', 'email': 'finance@college.edu',    'password': 'finance123'},
-    'General':   {'label': 'General Admin',       'icon': '📋', 'email': 'admin@college.edu',      'password': 'admin123'},
+    'Hostel':    {'label': 'Hostel / Warden',     'icon': '🏠', 'email': 'warden@college.edu',    'password': 'warden123'},
+    'IT':        {'label': 'IT Department',        'icon': '💻', 'email': 'it@college.edu',         'password': 'it123'},
+    'Academic':  {'label': 'Academic / Exam Cell', 'icon': '📚', 'email': 'academic@college.edu',   'password': 'academic123'},
+    'Library':   {'label': 'Library',              'icon': '📖', 'email': 'library@college.edu',    'password': 'library123'},
+    'Transport': {'label': 'Transport',            'icon': '🚌', 'email': 'transport@college.edu',  'password': 'transport123'},
+    'Finance':   {'label': 'Finance / Fees',       'icon': '💰', 'email': 'finance@college.edu',    'password': 'finance123'},
+    'General':   {'label': 'General Admin',        'icon': '📋', 'email': 'admin@college.edu',      'password': 'admin123'},
 }
 
 # ─────────────────────────────────────────────
-# AI KEYWORD LISTS — one per department
-# ─────────────────────────────────────────────
-
-CATEGORY_KEYWORDS = {
-    'Hostel': [
-        'hostel', 'room', 'roommate', 'mess', 'food', 'canteen', 'water',
-        'electricity', 'cleaning', 'warden', 'bed', 'mattress', 'bathroom',
-        'toilet', 'laundry', 'noise', 'curfew', 'accommodation', 'block',
-        'dormitory', 'dorm', 'inmate', 'lock', 'gate', 'visitor', 'pest',
-        'cockroach', 'rat', 'dirty', 'drain', 'dustbin', 'geyser', 'fan',
-    ],
-    'IT': [
-        'internet', 'wifi', 'wi-fi', 'computer', 'laptop', 'lab', 'software',
-        'hardware', 'network', 'server', 'login', 'password', 'system',
-        'printer', 'email', 'website', 'portal', 'slow', 'connection',
-        'database', 'it', 'mouse', 'keyboard', 'monitor', 'projector',
-        'cable', 'usb', 'antivirus', 'hack', 'virus', 'download', 'upload',
-    ],
-    'Academic': [
-        'exam', 'marks', 'grade', 'attendance', 'teacher', 'professor',
-        'lecture', 'class', 'course', 'syllabus', 'timetable', 'result',
-        'assignment', 'project', 'faculty', 'study', 'semester', 'cgpa',
-        'backlog', 'fail', 'revaluation', 'hall ticket', 'practical',
-        'lab report', 'viva', 'internal', 'external', 'department',
-    ],
-    'Library': [
-        'library', 'book', 'librarian', 'catalog', 'borrow', 'return',
-        'fine', 'overdue', 'reading room', 'journal', 'magazine', 'e-book',
-        'digital library', 'reservation', 'card', 'membership', 'noise',
-        'seat', 'chair', 'ac', 'air condition', 'photocopy', 'xerox',
-    ],
-    'Transport': [
-        'bus', 'transport', 'driver', 'route', 'vehicle', 'van', 'cab',
-        'pick up', 'drop', 'schedule', 'timing', 'late', 'delay', 'stop',
-        'conductor', 'pass', 'bus pass', 'travel', 'commute', 'road',
-        'breakdown', 'accident', 'fare', 'ticket',
-    ],
-    'Finance': [
-        'fee', 'fees', 'fine', 'payment', 'receipt', 'scholarship', 'refund',
-        'challan', 'bank', 'account', 'money', 'dues', 'pending payment',
-        'finance', 'scholarship', 'stipend', 'hostel fee', 'tuition',
-        'online payment', 'transaction', 'demand note', 'late fee',
-    ],
-}
-
-
-# ─────────────────────────────────────────────
-# AI CATEGORY VERIFICATION
-# ─────────────────────────────────────────────
-
-def ai_verify_category(title, description, user_selected_category):
-    """
-    Keyword-based NLP to verify category.
-    Scores each department by counting keyword matches.
-    Returns the best-matching department key (e.g. 'Hostel', 'IT').
-    If nothing matches, returns user's selection.
-    """
-    text = (title + ' ' + description).lower()
-    scores = {dept: 0 for dept in CATEGORY_KEYWORDS}
-
-    for dept, keywords in CATEGORY_KEYWORDS.items():
-        for keyword in keywords:
-            if keyword in text:
-                scores[dept] += 1
-
-    best = max(scores, key=scores.get)
-
-    # If no keywords matched at all, trust the student
-    if scores[best] == 0:
-        return user_selected_category if user_selected_category != 'Other' else 'General'
-
-    return best
-
-
-# ─────────────────────────────────────────────
-# DATABASE SETUP
+# DATABASE
 # ─────────────────────────────────────────────
 
 def get_db():
@@ -107,11 +40,9 @@ def get_db():
 
 
 def init_db():
-    """Create tables and seed default accounts."""
     conn = get_db()
     c = conn.cursor()
 
-    # Users table — now includes a 'department' column
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,43 +54,66 @@ def init_db():
         )
     ''')
 
-    # Complaints table
+    # complaints table now stores ai_confidence and ai_source
     c.execute('''
         CREATE TABLE IF NOT EXISTS complaints (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
-            title          TEXT NOT NULL,
-            description    TEXT NOT NULL,
-            category       TEXT NOT NULL,
-            ai_category    TEXT NOT NULL,
-            routed_to      TEXT NOT NULL,
-            status         TEXT NOT NULL DEFAULT 'Pending',
+            title          TEXT    NOT NULL,
+            description    TEXT    NOT NULL,
+            category       TEXT    NOT NULL,
+            ai_category    TEXT    NOT NULL,
+            ai_confidence  REAL    DEFAULT 0.0,
+            ai_source      TEXT    DEFAULT 'keyword_fallback',
+            routed_to      TEXT    NOT NULL,
+            status         TEXT    NOT NULL DEFAULT 'Pending',
             user_id        INTEGER NOT NULL,
-            submitted_at   TEXT NOT NULL,
+            submitted_at   TEXT    NOT NULL,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     ''')
 
-    # Seed super admin
+    # Re-route log: tracks every re-routing action by admins
     c.execute('''
-        INSERT OR IGNORE INTO users (name, email, password, role, department)
-        VALUES ('Super Admin', 'admin@college.edu', 'admin123', 'superadmin', NULL)
+        CREATE TABLE IF NOT EXISTS reroute_log (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_id   INTEGER NOT NULL,
+            from_dept      TEXT    NOT NULL,
+            to_dept        TEXT    NOT NULL,
+            rerouted_by    INTEGER NOT NULL,
+            rerouted_at    TEXT    NOT NULL,
+            note           TEXT    DEFAULT '',
+            FOREIGN KEY(complaint_id) REFERENCES complaints(id),
+            FOREIGN KEY(rerouted_by) REFERENCES users(id)
+        )
     ''')
 
-    # Seed one department head account per department
+    # Super admin (hashed password)
+    existing = c.execute("SELECT id FROM users WHERE email='admin@college.edu'").fetchone()
+    if not existing:
+        c.execute(
+            'INSERT INTO users (name,email,password,role,department) VALUES (?,?,?,?,?)',
+            ('Super Admin', 'admin@college.edu',
+             generate_password_hash('admin123'), 'superadmin', None)
+        )
+
+    # Department heads (hashed passwords)
     for dept_key, dept_info in DEPARTMENTS.items():
         if dept_key == 'General':
-            continue  # Super admin already handles General
-        c.execute('''
-            INSERT OR IGNORE INTO users (name, email, password, role, department)
-            VALUES (?, ?, ?, 'admin', ?)
-        ''', (dept_info['label'] + ' Head', dept_info['email'], dept_info['password'], dept_key))
+            continue
+        existing = c.execute('SELECT id FROM users WHERE email=?', (dept_info['email'],)).fetchone()
+        if not existing:
+            c.execute(
+                'INSERT INTO users (name,email,password,role,department) VALUES (?,?,?,?,?)',
+                (dept_info['label'] + ' Head', dept_info['email'],
+                 generate_password_hash(dept_info['password']), 'admin', dept_key)
+            )
 
     conn.commit()
     conn.close()
 
 
 # ─────────────────────────────────────────────
-# ROUTES — AUTHENTICATION
+# AUTHENTICATION
 # ─────────────────────────────────────────────
 
 @app.route('/')
@@ -175,22 +129,19 @@ def login():
 
         conn = get_db()
         user = conn.execute(
-            'SELECT * FROM users WHERE email = ? AND password = ?',
-            (email, password)
+            'SELECT * FROM users WHERE email = ?', (email,)
         ).fetchone()
         conn.close()
 
-        if user:
+        if user and check_password_hash(user['password'], password):
             session['user_id']         = user['id']
             session['user_name']       = user['name']
             session['user_role']       = user['role']
             session['user_department'] = user['department']
             flash(f"Welcome, {user['name']}!", 'success')
-
             if user['role'] in ('admin', 'superadmin'):
                 return redirect(url_for('admin_dashboard'))
-            else:
-                return redirect(url_for('student_dashboard'))
+            return redirect(url_for('student_dashboard'))
         else:
             flash('Invalid email or password.', 'error')
 
@@ -207,8 +158,8 @@ def signup():
         conn = get_db()
         try:
             conn.execute(
-                'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-                (name, email, password, 'student')
+                'INSERT INTO users (name,email,password,role) VALUES (?,?,?,?)',
+                (name, email, generate_password_hash(password), 'student')
             )
             conn.commit()
             flash('Account created! Please log in.', 'success')
@@ -229,7 +180,7 @@ def logout():
 
 
 # ─────────────────────────────────────────────
-# ROUTES — STUDENT
+# STUDENT ROUTES
 # ─────────────────────────────────────────────
 
 @app.route('/dashboard')
@@ -239,7 +190,7 @@ def student_dashboard():
 
     conn = get_db()
     complaints = conn.execute(
-        'SELECT * FROM complaints WHERE user_id = ? ORDER BY submitted_at DESC',
+        'SELECT * FROM complaints WHERE user_id=? ORDER BY submitted_at DESC',
         (session['user_id'],)
     ).fetchall()
     conn.close()
@@ -263,33 +214,31 @@ def submit_complaint():
     if request.method == 'POST':
         title       = request.form['title'].strip()
         description = request.form['description'].strip()
-        category    = request.form['category'].strip()   # what student chose
+        category    = request.form['category'].strip()
 
-        # Determine where to route
-        if category == 'Other':
-            ai_category = 'General'
-            routed_to   = 'General'
-        else:
-            ai_category = ai_verify_category(title, description, category)
-            routed_to   = ai_category   # route by AI's decision
+        # ── Call ML classifier ─────────────────────────────────
+        result = classify(title, description, category)
 
         conn = get_db()
         conn.execute(
             '''INSERT INTO complaints
-               (title, description, category, ai_category, routed_to, status, user_id, submitted_at)
-               VALUES (?, ?, ?, ?, ?, 'Pending', ?, ?)''',
-            (title, description, category, ai_category, routed_to,
-             session['user_id'], datetime.now().strftime('%Y-%m-%d %H:%M'))
+               (title,description,category,ai_category,ai_confidence,
+                ai_source,routed_to,status,user_id,submitted_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?)''',
+            (title, description, category,
+             result['category'],
+             result['confidence'],
+             result['source'],
+             result['routed_to'],
+             'Pending',
+             session['user_id'],
+             datetime.now().strftime('%Y-%m-%d %H:%M'))
         )
         conn.commit()
         conn.close()
 
-        if category != 'Other' and category != ai_category:
-            flash(
-                f'Submitted! You selected "{category}" but AI routed it to '
-                f'"{ai_category}" department. Admin will review if needed.',
-                'warning'
-            )
+        if result['mismatch_msg']:
+            flash(result['mismatch_msg'], 'warning')
         else:
             flash('Complaint submitted and routed successfully!', 'success')
 
@@ -299,7 +248,7 @@ def submit_complaint():
 
 
 # ─────────────────────────────────────────────
-# ROUTES — ADMIN / DEPARTMENT HEAD
+# ADMIN ROUTES
 # ─────────────────────────────────────────────
 
 @app.route('/admin')
@@ -307,31 +256,25 @@ def admin_dashboard():
     if 'user_id' not in session or session['user_role'] not in ('admin', 'superadmin'):
         return redirect(url_for('login'))
 
-    is_super    = session['user_role'] == 'superadmin'
-    user_dept   = session.get('user_department')
+    is_super  = (session['user_role'] == 'superadmin')
+    user_dept = session.get('user_department')
 
-    # Filters from query string
     filter_dept   = request.args.get('category', '')
     filter_status = request.args.get('status', '')
 
     query  = '''SELECT c.*, u.name as student_name, u.email as student_email
-                FROM complaints c
-                JOIN users u ON c.user_id = u.id
-                WHERE 1=1'''
+                FROM complaints c JOIN users u ON c.user_id=u.id WHERE 1=1'''
     params = []
 
     if not is_super:
-        # Department head only sees their own complaints
-        query  += ' AND c.routed_to = ?'
+        query += ' AND c.routed_to=?'
         params.append(user_dept)
-    else:
-        # Super admin can filter by department
-        if filter_dept:
-            query  += ' AND c.routed_to = ?'
-            params.append(filter_dept)
+    elif filter_dept:
+        query += ' AND c.routed_to=?'
+        params.append(filter_dept)
 
     if filter_status:
-        query  += ' AND c.status = ?'
+        query += ' AND c.status=?'
         params.append(filter_status)
 
     query += ' ORDER BY c.submitted_at DESC'
@@ -355,29 +298,74 @@ def admin_dashboard():
                            selected_status=filter_status)
 
 
-@app.route('/admin/update/<int:complaint_id>', methods=['POST'])
-def update_status(complaint_id):
+@app.route('/admin/update/<int:cid>', methods=['POST'])
+def update_status(cid):
     if 'user_id' not in session or session['user_role'] not in ('admin', 'superadmin'):
         return redirect(url_for('login'))
 
     new_status = request.form['status']
     conn = get_db()
 
-    # Department heads can only update complaints routed to them
     if session['user_role'] == 'admin':
-        complaint = conn.execute(
-            'SELECT routed_to FROM complaints WHERE id = ?', (complaint_id,)
-        ).fetchone()
-        if not complaint or complaint['routed_to'] != session['user_department']:
-            flash('Unauthorized action.', 'error')
+        row = conn.execute('SELECT routed_to FROM complaints WHERE id=?', (cid,)).fetchone()
+        if not row or row['routed_to'] != session['user_department']:
+            flash('Unauthorized.', 'error')
             conn.close()
             return redirect(url_for('admin_dashboard'))
 
-    conn.execute('UPDATE complaints SET status = ? WHERE id = ?', (new_status, complaint_id))
+    conn.execute('UPDATE complaints SET status=? WHERE id=?', (new_status, cid))
+    conn.commit()
+    conn.close()
+    flash(f'Complaint #{cid} updated to "{new_status}".', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
+@app.route('/admin/reroute/<int:cid>', methods=['POST'])
+def reroute_complaint(cid):
+    """
+    Admin manually re-routes a complaint to a different department.
+    Only superadmin or the currently-assigned department head can do this.
+    """
+    if 'user_id' not in session or session['user_role'] not in ('admin', 'superadmin'):
+        return redirect(url_for('login'))
+
+    new_dept = request.form['new_dept'].strip()
+    note     = request.form.get('note', '').strip()
+
+    if new_dept not in DEPARTMENTS:
+        flash('Invalid department selected.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+    conn = get_db()
+    row  = conn.execute('SELECT routed_to FROM complaints WHERE id=?', (cid,)).fetchone()
+
+    if not row:
+        flash('Complaint not found.', 'error')
+        conn.close()
+        return redirect(url_for('admin_dashboard'))
+
+    # Department head can only re-route their own complaints
+    if session['user_role'] == 'admin' and row['routed_to'] != session['user_department']:
+        flash('You can only re-route complaints assigned to your department.', 'error')
+        conn.close()
+        return redirect(url_for('admin_dashboard'))
+
+    old_dept = row['routed_to']
+
+    conn.execute('UPDATE complaints SET routed_to=? WHERE id=?', (new_dept, cid))
+    conn.execute(
+        '''INSERT INTO reroute_log
+           (complaint_id,from_dept,to_dept,rerouted_by,rerouted_at,note)
+           VALUES (?,?,?,?,?,?)''',
+        (cid, old_dept, new_dept, session['user_id'],
+         datetime.now().strftime('%Y-%m-%d %H:%M'), note)
+    )
     conn.commit()
     conn.close()
 
-    flash(f'Complaint #{complaint_id} updated to "{new_status}".', 'success')
+    from_label = DEPARTMENTS.get(old_dept, {}).get('label', old_dept)
+    to_label   = DEPARTMENTS.get(new_dept, {}).get('label', new_dept)
+    flash(f'Complaint #{cid} re-routed from {from_label} → {to_label}.', 'success')
     return redirect(url_for('admin_dashboard'))
 
 
@@ -387,11 +375,11 @@ def update_status(complaint_id):
 
 if __name__ == '__main__':
     init_db()
-    print("\n✅ Database initialized with all department accounts.")
-    print("\n📋 Department Login Accounts:")
-    print("   Super Admin  →  admin@college.edu       / admin123")
+    print("\n✅ Database initialized (passwords are now hashed).")
+    print("\n📋 Login Accounts:")
+    print("   Super Admin  →  admin@college.edu / admin123")
     for key, d in DEPARTMENTS.items():
         if key != 'General':
-            print(f"   {d['label']:<22} →  {d['email']:<30} / {d['password']}")
-    print("\n🚀 Server starting at http://127.0.0.1:5000\n")
+            print(f"   {d['label']:<22} →  {d['email']}")
+    print("\n🚀 Starting server at http://127.0.0.1:5000\n")
     app.run(debug=True)

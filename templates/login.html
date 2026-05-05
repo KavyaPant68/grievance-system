@@ -4,7 +4,7 @@
 {% block extra_styles %}
 <style>
     body { display: flex; flex-direction: column; }
-    .auth-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; min-height: calc(100vh - 60px); gap: 2.5rem; flex-wrap: wrap; }
+    .auth-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; min-height: calc(100vh - 60px); }
 
     .auth-box { width: 100%; max-width: 420px; }
 
@@ -21,14 +21,6 @@
 
     .auth-footer { text-align: center; margin-top: 1.25rem; font-size: .88rem; color: var(--ink-soft); }
     .auth-footer a { color: var(--accent2); font-weight: 600; text-decoration: none; }
-
-    /* Reference card on the side */
-    .ref-card { width: 100%; max-width: 320px; background: var(--white); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border); box-shadow: var(--shadow); }
-    .ref-card h3 { font-size: .95rem; font-weight: 700; margin-bottom: 1rem; color: var(--ink); }
-    .ref-row { display: flex; justify-content: space-between; align-items: center; padding: .45rem 0; border-bottom: 1px solid var(--border); font-size: .82rem; }
-    .ref-row:last-child { border-bottom: none; }
-    .ref-dept { display: flex; align-items: center; gap: .4rem; font-weight: 500; color: var(--ink); }
-    .ref-cred { color: var(--ink-soft); font-family: monospace; font-size: .78rem; }
 </style>
 {% endblock %}
 
@@ -61,7 +53,7 @@
         </div>
     </div>
 
-    <!-- Demo credentials reference -->
+    <!-- Demo credentials reference 
     <div class="ref-card">
         <h3>🔑 Demo Login Accounts</h3>
 
@@ -98,6 +90,7 @@
             <span class="ref-cred">Sign up to create account</span>
         </div>
     </div>
+-->
 
 </div>
 {% endblock %}
