@@ -25,6 +25,16 @@
 
     .submit-btn { width: 100%; padding: .9rem; background: var(--ink); color: var(--white); border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: .5rem; transition: background .2s; }
     .submit-btn:hover { background: #2d2d4a; }
+
+    /* File upload */
+    .file-drop { border: 2px dashed var(--border); border-radius: 10px; background: var(--surface); transition: border-color .2s; }
+    .file-drop:hover { border-color: var(--accent2); }
+    .file-drop-inner { padding: 1.5rem; text-align: center; cursor: pointer; }
+    .file-icon { font-size: 2rem; margin-bottom: .4rem; }
+    .file-text { font-size: .9rem; font-weight: 600; color: var(--ink); }
+    .file-hint { font-size: .78rem; color: var(--ink-soft); margin-top: .2rem; }
+    .file-preview { display: flex; align-items: center; justify-content: space-between; padding: .75rem 1rem; background: #e8f4fd; border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; font-size: .88rem; font-weight: 500; }
+    .file-clear { background: none; border: none; cursor: pointer; color: var(--accent); font-size: .85rem; font-weight: 600; }
 </style>
 {% endblock %}
 
@@ -44,7 +54,8 @@
 
     <div class="card">
         <div class="card-body">
-            <form method="POST" action="{{ url_for('submit_complaint') }}">
+            <form method="POST" action="{{ url_for('submit_complaint') }}"
+                  enctype="multipart/form-data">
 
                 <div class="form-group">
                     <label for="title">Complaint Title</label>
@@ -91,6 +102,25 @@
                     </div>
                 </div>
 
+                <!-- FILE ATTACHMENT -->
+                <div class="form-group">
+                    <label>Attach Evidence <span style="color:var(--ink-soft);font-weight:400;">(optional — screenshot, photo, marksheet, etc.)</span></label>
+                    <div class="file-drop" id="file-drop">
+                        <input type="file" id="attachment" name="attachment"
+                               accept=".jpg,.jpeg,.png,.pdf">
+                        <div class="file-drop-inner"
+                             onclick="document.getElementById('attachment').click()">
+                            <div class="file-icon">📎</div>
+                            <div class="file-text">Click to choose a file</div>
+                            <div class="file-hint">JPG, PNG or PDF — max 5 MB</div>
+                        </div>
+                        <div class="file-preview" id="file-preview">
+                            <span id="file-name"></span>
+                            <button type="button" onclick="clearFile()" class="file-clear">✕ Remove</button>
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" class="submit-btn">Submit & Route Complaint →</button>
             </form>
         </div>
@@ -98,12 +128,33 @@
 </div>
 
 <script>
-    // Show "Other" note when that option is selected
+    // Show/hide Other note
     document.querySelectorAll('.dept-option').forEach(radio => {
         radio.addEventListener('change', function () {
             document.getElementById('other-note').style.display =
                 this.value === 'Other' ? 'block' : 'none';
         });
     });
+
+    // File upload preview
+    const fileInput  = document.getElementById('attachment');
+    const preview    = document.getElementById('file-preview');
+    const fileNameEl = document.getElementById('file-name');
+    const dropInner  = document.querySelector('.file-drop-inner');
+
+    fileInput.addEventListener('change', function () {
+        if (this.files && this.files[0]) {
+            const f = this.files[0];
+            fileNameEl.textContent = '📄 ' + f.name + '  (' + (f.size/1024).toFixed(0) + ' KB)';
+            preview.style.display    = 'flex';
+            dropInner.style.display  = 'none';
+        }
+    });
+
+    function clearFile() {
+        fileInput.value          = '';
+        preview.style.display    = 'none';
+        dropInner.style.display  = 'block';
+    }
 </script>
 {% endblock %}

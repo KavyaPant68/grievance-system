@@ -6,14 +6,49 @@ Run AFTER training the model:
     2.  python app.py             (every time to start the server)
 """
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import sqlite3
+import os
+import uuid
 from datetime import datetime
 from ai_classifier import classify   # ← new ML-based classifier
 
 app = Flask(__name__)
 app.secret_key = 'grievance_secret_key_2024'
+
+# ─────────────────────────────────────────────
+# FILE UPLOAD CONFIGURATION
+# ─────────────────────────────────────────────
+
+UPLOAD_FOLDER   = 'uploads'                        # folder where files are saved
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'} # only these types allowed
+MAX_FILE_MB     = 5                                 # reject files larger than 5 MB
+app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_MB * 1024 * 1024
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)          # create folder if not there
+
+def allowed_file(filename):
+    """Returns True if the file extension is in the allowed list."""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def save_file(file):
+    """
+    Saves an uploaded file safely and returns the stored filename.
+    Uses uuid to make every filename unique — prevents overwrites.
+    e.g.  screenshot.jpg  →  a3f1c29b-4d2e-screenshot.jpg
+    """
+    if not file or file.filename == '':
+        return None
+    if not allowed_file(file.filename):
+        return None
+    ext          = file.filename.rsplit('.', 1)[1].lower()
+    safe_name    = secure_filename(file.filename.rsplit('.', 1)[0])
+    unique_name  = f"{uuid.uuid4().hex[:8]}-{safe_name}.{ext}"
+    file.save(os.path.join(UPLOAD_FOLDER, unique_name))
+    return unique_name
 
 # ─────────────────────────────────────────────
 # DEPARTMENT CONFIGURATION
@@ -54,7 +89,7 @@ def init_db():
         )
     ''')
 
-    # complaints table now stores ai_confidence and ai_source
+    # complaints table now stores ai_confidence, ai_source, and attachment
     c.execute('''
         CREATE TABLE IF NOT EXISTS complaints (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,6 +101,7 @@ def init_db():
             ai_source      TEXT    DEFAULT 'keyword_fallback',
             routed_to      TEXT    NOT NULL,
             status         TEXT    NOT NULL DEFAULT 'Pending',
+            attachment     TEXT    DEFAULT NULL,
             user_id        INTEGER NOT NULL,
             submitted_at   TEXT    NOT NULL,
             FOREIGN KEY(user_id) REFERENCES users(id)
@@ -216,6 +252,15 @@ def submit_complaint():
         description = request.form['description'].strip()
         category    = request.form['category'].strip()
 
+        # ── Handle file upload ─────────────────────────────────
+        uploaded_file = request.files.get('attachment')  # 'attachment' matches form field name
+        attachment_name = save_file(uploaded_file)        # returns filename or None
+
+        if uploaded_file and uploaded_file.filename != '' and attachment_name is None:
+            # File was provided but rejected (wrong type or too large)
+            flash('Invalid file. Only JPG, PNG, PDF allowed (max 5 MB). Complaint not submitted.', 'error')
+            return render_template('submit_complaint.html', departments=DEPARTMENTS)
+
         # ── Call ML classifier ─────────────────────────────────
         result = classify(title, description, category)
 
@@ -223,14 +268,15 @@ def submit_complaint():
         conn.execute(
             '''INSERT INTO complaints
                (title,description,category,ai_category,ai_confidence,
-                ai_source,routed_to,status,user_id,submitted_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?)''',
+                ai_source,routed_to,status,attachment,user_id,submitted_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
             (title, description, category,
              result['category'],
              result['confidence'],
              result['source'],
              result['routed_to'],
              'Pending',
+             attachment_name,           # None if no file was uploaded
              session['user_id'],
              datetime.now().strftime('%Y-%m-%d %H:%M'))
         )
@@ -372,6 +418,32 @@ def reroute_complaint(cid):
 # ─────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """
+    Serves an uploaded file. Only logged-in admins and the
+    student who submitted it can access attachments.
+    """
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    # Admins can always view files
+    if session['user_role'] in ('admin', 'superadmin'):
+        return send_from_directory(UPLOAD_FOLDER, filename)
+
+    # Students can only view their own attachments
+    conn = get_db()
+    row = conn.execute(
+        'SELECT user_id FROM complaints WHERE attachment=?', (filename,)
+    ).fetchone()
+    conn.close()
+
+    if row and row['user_id'] == session['user_id']:
+        return send_from_directory(UPLOAD_FOLDER, filename)
+
+    flash('Access denied.', 'error')
+    return redirect(url_for('student_dashboard'))
 
 if __name__ == '__main__':
     init_db()

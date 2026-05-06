@@ -4,14 +4,12 @@
 {% block content %}
 <div class="page">
 
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: .25rem;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.25rem; flex-wrap:wrap; gap:1rem;">
         <div>
             <h1 class="page-title">Hello, {{ session.user_name }} 👋</h1>
-            <p class="page-subtitle">Track all your submitted complaints below.</p>
+            <p class="page-subtitle">Track all your submitted complaints and their routing below.</p>
         </div>
-        <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent">
-            + New Complaint
-        </a>
+        <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent">+ New Complaint</a>
     </div>
 
     <!-- Stats -->
@@ -34,7 +32,7 @@
         </div>
     </div>
 
-    <!-- Complaints Table -->
+    <!-- Complaints -->
     <div class="card">
         <div class="card-header">
             <span style="font-weight:600;">Your Complaints</span>
@@ -48,9 +46,11 @@
                         <th>#</th>
                         <th>Title</th>
                         <th>You Selected</th>
-                        <th>AI Suggested</th>
+                        <th>AI Verified</th>
+                        <th>Routed To</th>
+                        <th>Attachment</th>
                         <th>Status</th>
-                        <th>Submitted</th>
+                        <th>Date</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -59,21 +59,44 @@
                         <td style="color:var(--ink-soft); font-size:.85rem;">{{ c.id }}</td>
                         <td>
                             <strong>{{ c.title }}</strong>
-                            <div style="font-size:.82rem; color:var(--ink-soft); margin-top:.2rem;">
+                            <div style="font-size:.8rem; color:var(--ink-soft); margin-top:.15rem;">
                                 {{ c.description[:80] }}{% if c.description|length > 80 %}…{% endif %}
                             </div>
                         </td>
                         <td>
                             <span class="badge badge-{{ c.category | lower }}">
+                                {% if c.category in departments %}{{ departments[c.category].icon }}{% endif %}
                                 {{ c.category }}
                             </span>
                         </td>
                         <td>
                             <span class="badge badge-{{ c.ai_category | lower }}
-                                {% if c.category != c.ai_category %} badge-mismatch{% endif %}">
+                                {% if c.category != c.ai_category and c.category != 'Other' %} badge-mismatch{% endif %}">
+                                {% if c.ai_category in departments %}{{ departments[c.ai_category].icon }}{% endif %}
                                 {{ c.ai_category }}
-                                {% if c.category != c.ai_category %}⚠️{% endif %}
+                                {% if c.category != c.ai_category and c.category != 'Other' %}⚠️{% endif %}
                             </span>
+                        </td>
+                        <td>
+                            {% if c.routed_to in departments %}
+                                <span style="font-weight:600;">
+                                    {{ departments[c.routed_to].icon }}
+                                    {{ departments[c.routed_to].label }}
+                                </span>
+                            {% else %}
+                                {{ c.routed_to }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.attachment %}
+                                <a href="{{ url_for('uploaded_file', filename=c.attachment) }}"
+                                   target="_blank"
+                                   style="font-size:.82rem; color:var(--accent2); font-weight:600; text-decoration:none;">
+                                    📎 View file
+                                </a>
+                            {% else %}
+                                <span style="font-size:.8rem; color:var(--ink-soft);">—</span>
+                            {% endif %}
                         </td>
                         <td>
                             {% if c.status == 'Pending' %}
@@ -84,7 +107,7 @@
                                 <span class="badge badge-resolved">✅ Resolved</span>
                             {% endif %}
                         </td>
-                        <td style="font-size:.85rem; color:var(--ink-soft);">{{ c.submitted_at }}</td>
+                        <td style="font-size:.82rem; color:var(--ink-soft);">{{ c.submitted_at }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -93,13 +116,10 @@
         {% else %}
         <div class="empty-state">
             <div class="icon">📭</div>
-            <p>No complaints yet. Submit your first complaint!</p>
-            <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent" style="margin-top:1rem;">
-                Submit a Complaint
-            </a>
+            <p>No complaints yet. Submit your first one!</p>
+            <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent" style="margin-top:1rem;">Submit a Complaint</a>
         </div>
         {% endif %}
     </div>
-
 </div>
 {% endblock %}
