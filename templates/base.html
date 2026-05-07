@@ -110,6 +110,24 @@
         /* EMPTY */
         .empty-state { text-align: center; padding: 3rem 2rem; color: var(--ink-soft); }
         .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+
+        /* ── OVERDUE ── */
+        .row-overdue td { background: rgba(230,57,70,.05) !important; }
+        .badge-overdue { background: var(--accent); color: #fff; font-size: .7rem; padding: 2px 7px; border-radius: 10px; margin-left: 4px; font-weight: 700; }
+        .overdue-date { color: var(--accent); font-weight: 600; }
+        .alert-overdue { background: rgba(230,57,70,.08); border-left: 4px solid var(--accent); padding: .5rem .9rem; border-radius: 6px; color: #991b1b; font-size: .82rem; margin-top: .35rem; }
+
+        /* ── ADMIN REMARK (shown to student) ── */
+        .admin-remark-box { background: rgba(69,123,157,.07); border-left: 4px solid var(--accent2); border-radius: 6px; padding: .5rem .9rem; margin-top: .35rem; }
+        .remark-label { font-size: .72rem; font-weight: 700; color: var(--accent2); text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: .15rem; }
+        .remark-preview { font-size: .78rem; color: var(--ink-soft); font-style: italic; }
+
+        /* ── CC BADGES ── */
+        .badge-cc { background: #7b2d8b; color: #fff; font-size: .68rem; padding: 2px 7px; border-radius: 10px; margin-left: 4px; font-weight: 700; }
+        .badge-cc-dept { background: rgba(123,45,139,.10); color: #7b2d8b; border: 1px solid rgba(123,45,139,.25); font-size: .72rem; padding: 2px 7px; border-radius: 10px; margin-right: 3px; font-weight: 600; }
+
+        /* ── DEADLINE ── */
+        .deadline-info { font-size: .82rem; color: var(--ink-soft); margin-top: .25rem; }
     </style>
     {% block extra_styles %}{% endblock %}
 </head>

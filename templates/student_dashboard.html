@@ -49,16 +49,21 @@
                         <th>AI Verified</th>
                         <th>Routed To</th>
                         <th>Attachment</th>
+                        <th>Admin Remark</th>
+                        <th>Deadline</th>
                         <th>Status</th>
                         <th>Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for c in complaints %}
-                    <tr>
+                    <tr {% if c.is_overdue %}class="row-overdue"{% endif %}>
                         <td style="color:var(--ink-soft); font-size:.85rem;">{{ c.id }}</td>
                         <td>
                             <strong>{{ c.title }}</strong>
+                            {% if c.is_overdue %}
+                                <span class="badge-overdue">⚠ Overdue</span>
+                            {% endif %}
                             <div style="font-size:.8rem; color:var(--ink-soft); margin-top:.15rem;">
                                 {{ c.description[:80] }}{% if c.description|length > 80 %}…{% endif %}
                             </div>
@@ -94,6 +99,26 @@
                                    style="font-size:.82rem; color:var(--accent2); font-weight:600; text-decoration:none;">
                                     📎 View file
                                 </a>
+                            {% else %}
+                                <span style="font-size:.8rem; color:var(--ink-soft);">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="max-width:180px;">
+                            {% if c.admin_remark %}
+                                <div class="admin-remark-box">
+                                    <span class="remark-label">💬 Admin</span>
+                                    <span style="font-size:.82rem;">{{ c.admin_remark }}</span>
+                                </div>
+                            {% else %}
+                                <span style="font-size:.8rem; color:var(--ink-soft);">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.resolve_by %}
+                                <span class="deadline-info {% if c.is_overdue %}overdue-date{% endif %}">
+                                    📅 {{ c.resolve_by }}
+                                    {% if c.is_overdue %}<br><em style="font-size:.75rem;">Overdue</em>{% endif %}
+                                </span>
                             {% else %}
                                 <span style="font-size:.8rem; color:var(--ink-soft);">—</span>
                             {% endif %}

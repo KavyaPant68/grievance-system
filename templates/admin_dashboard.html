@@ -28,11 +28,16 @@
     .source-ml  { background:#dbeafe; color:#1e40af; }
     .source-kw  { background:#f3f4f6; color:#6b7280; }
 
-    /* Re-route modal */
+    /* Modals */
     .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; align-items:center; justify-content:center; }
     .modal-overlay.open { display:flex; }
-    .modal { background:var(--white); border-radius:16px; padding:2rem; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .modal { background:var(--white); border-radius:16px; padding:2rem; width:100%; max-width:460px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
     .modal h3 { font-size:1.1rem; font-weight:600; margin-bottom:1.25rem; }
+    .modal .form-group { margin-bottom:1rem; }
+    .modal label { font-size:.82rem; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.4px; margin-bottom:.3rem; }
+    .modal input[type="date"] { padding:.55rem .85rem; font-size:.9rem; }
+    .modal textarea { min-height:70px; font-size:.9rem; }
+    .modal select[multiple] { min-height:110px; font-size:.88rem; }
     .modal-actions { display:flex; gap:.75rem; margin-top:1.25rem; justify-content:flex-end; }
 
     .mismatch-row td { background:#fffbeb; }
@@ -40,6 +45,7 @@
     .status-form select { padding:.28rem .45rem; font-size:.8rem; border-radius:6px; }
     .reroute-btn { background:none; border:1px solid var(--border); border-radius:6px; padding:.25rem .6rem; font-size:.78rem; cursor:pointer; color:var(--ink-soft); font-family:'DM Sans',sans-serif; }
     .reroute-btn:hover { background:var(--surface); color:var(--ink); }
+    .readonly-cc { font-size:.78rem; color:var(--ink-soft); font-style:italic; }
 </style>
 {% endblock %}
 
@@ -51,7 +57,7 @@
         <span class="big-icon">{{ departments[user_dept].icon }}</span>
         <div>
             <h2>{{ departments[user_dept].label }} Dashboard</h2>
-            <p>Showing only complaints routed to your department.</p>
+            <p>Showing complaints routed to your department, plus any CC'd to you.</p>
         </div>
     </div>
     {% else %}
@@ -115,6 +121,7 @@
                         <th>Student selected</th>
                         <th>AI verdict + confidence</th>
                         <th>Routed to</th>
+                        <th>Deadline</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -123,17 +130,41 @@
                 {% for c in complaints %}
                 {% set conf = c.ai_confidence * 100 %}
                 {% set is_mismatch = (c.category != c.ai_category and c.category != 'Other') %}
-                <tr {% if is_mismatch %}class="mismatch-row"{% endif %}>
+                <tr {% if is_mismatch and not c.is_overdue %}class="mismatch-row"{% elif c.is_overdue %}class="row-overdue"{% endif %}>
                     <td style="color:var(--ink-soft);font-size:.82rem;">{{ c.id }}</td>
                     <td>
                         <strong style="font-size:.88rem;">{{ c.student_name }}</strong>
                         <div style="font-size:.76rem;color:var(--ink-soft);">{{ c.student_email }}</div>
                     </td>
-                    <td style="max-width:200px;">
+                    <td style="max-width:220px;">
                         <strong style="font-size:.85rem;">{{ c.title }}</strong>
+                        {% if c.cc_dept_label %}
+                            <span class="badge-cc">CC</span>
+                        {% endif %}
+                        {% if c.is_overdue %}
+                            <span class="badge-overdue">⚠ Overdue</span>
+                        {% endif %}
                         <div style="font-size:.76rem;color:var(--ink-soft);margin-top:.1rem;">
                             {{ c.description[:65] }}{% if c.description|length>65 %}…{% endif %}
                         </div>
+                        {% if c.attachment %}
+                        <div style="margin-top:.25rem;">
+                            <a href="{{ url_for('uploaded_file', filename=c.attachment) }}"
+                               target="_blank" style="font-size:.76rem;color:var(--accent2);font-weight:600;text-decoration:none;">📎 Attachment</a>
+                        </div>
+                        {% endif %}
+                        {% if c.admin_remark %}
+                        <div style="margin-top:.25rem;">
+                            <span class="remark-preview">💬 {{ c.admin_remark }}</span>
+                        </div>
+                        {% endif %}
+                        {% if cc_map[c.id] %}
+                        <div style="margin-top:.3rem;">
+                            {% for dept in cc_map[c.id] %}
+                                <span class="badge-cc-dept">CC: {{ departments[dept].icon }} {{ dept }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </td>
                     <td>
                         <span class="badge badge-{{ c.category|lower }}">
@@ -142,13 +173,11 @@
                         </span>
                     </td>
                     <td>
-                        <!-- AI predicted category -->
                         <span class="badge badge-{{ c.ai_category|lower }}">
                             {% if c.ai_category in departments %}{{ departments[c.ai_category].icon }}{% endif %}
                             {{ c.ai_category }}
                             {% if is_mismatch %} ⚠️{% endif %}
                         </span>
-                        <!-- Confidence bar -->
                         <div class="conf-bar-wrap" style="margin-top:.3rem;">
                             <div class="conf-bar {% if conf >= 75 %}conf-high{% elif conf >= 50 %}conf-medium{% else %}conf-low{% endif %}"
                                  style="width:{{ [conf,100]|min }}%"></div>
@@ -167,26 +196,35 @@
                         </span>
                     </td>
                     <td>
+                        {% if c.resolve_by %}
+                            <span class="{% if c.is_overdue %}overdue-date{% endif %}" style="font-size:.82rem;">
+                                {{ c.resolve_by }}
+                            </span>
+                        {% else %}
+                            <span style="color:var(--ink-soft);font-size:.8rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
                         {% if c.status=='Pending' %}<span class="badge badge-pending">⏳ Pending</span>
                         {% elif c.status=='In Progress' %}<span class="badge badge-progress">🔄 In Progress</span>
                         {% else %}<span class="badge badge-resolved">✅ Resolved</span>{% endif %}
                     </td>
                     <td>
-                        <!-- Status update -->
-                        <form method="POST" action="{{ url_for('update_status',cid=c.id) }}" class="status-form">
-                            <select name="status">
-                                <option {% if c.status=='Pending' %}selected{% endif %}>Pending</option>
-                                <option {% if c.status=='In Progress' %}selected{% endif %}>In Progress</option>
-                                <option {% if c.status=='Resolved' %}selected{% endif %}>Resolved</option>
-                            </select>
-                            <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                        </form>
-                        <!-- Re-route button -->
-                        <button class="reroute-btn" style="margin-top:.4rem;"
-                                onclick="openReroute({{ c.id }}, '{{ c.routed_to }}')">
-                            ↪ Re-route
-                        </button>
-                    </td>
+    <!-- Update button: available to primary dept AND cc'd dept -->
+    <button class="btn btn-primary btn-sm"
+        onclick="openStatusModal({{ c.id }}, '{{ c.status }}', `{{ c.admin_remark or '' }}`, '{{ c.resolve_by or '' }}')">
+        Update
+    </button>
+    <!-- Re-route button: only for primary dept, not cc'd -->
+    {% if not c.cc_dept_label %}
+    <button class="reroute-btn" style="margin-top:.4rem;"
+        onclick="openReroute({{ c.id }}, '{{ c.routed_to }}', {{ cc_map[c.id]|tojson }})">
+        ↪ Re-route
+    </button>
+    {% else %}
+    <div style="font-size:.75rem;color:var(--ink-soft);margin-top:.3rem;">CC — can update, not re-route</div>
+    {% endif %}
+</td>
                 </tr>
                 {% endfor %}
                 </tbody>
@@ -201,7 +239,36 @@
     </div>
 </div>
 
-<!-- Re-route Modal -->
+<!-- ── STATUS UPDATE MODAL ── -->
+<div class="modal-overlay" id="status-modal">
+    <div class="modal">
+        <h3>✏️ Update Complaint</h3>
+        <form method="POST" action="" id="status-form">
+            <div class="form-group">
+                <label>Status</label>
+                <select name="status" id="modal-status">
+                    <option value="Pending">⏳ Pending</option>
+                    <option value="In Progress">🔄 In Progress</option>
+                    <option value="Resolved">✅ Resolved</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Admin Remark <span style="font-weight:400;text-transform:none;font-size:.78rem;">(visible to student)</span></label>
+                <textarea name="admin_remark" id="modal-remark" placeholder="e.g. Issue escalated to warden, expected fix in 3 days..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Resolve By <span style="font-weight:400;text-transform:none;font-size:.78rem;">(deadline date)</span></label>
+                <input type="date" name="resolve_by" id="modal-deadline" min="{{ today }}">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeModal('status-modal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── REROUTE MODAL ── -->
 <div class="modal-overlay" id="reroute-modal">
     <div class="modal">
         <h3>↪ Re-route Complaint</h3>
@@ -215,11 +282,19 @@
                 </select>
             </div>
             <div class="form-group">
+                <label>CC Departments <span style="font-weight:400;text-transform:none;font-size:.78rem;">(Ctrl/Cmd + click for multiple)</span></label>
+                <select name="cc_depts" id="cc-depts" multiple>
+                    {% for key, dept in departments.items() %}
+                    <option value="{{ key }}">{{ dept.icon }} {{ dept.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
                 <label>Reason / Note (optional)</label>
-                <input type="text" name="note" placeholder="e.g. Issue is actually about WiFi not hostel">
+                <textarea name="note" placeholder="e.g. Issue is actually about WiFi not hostel" style="min-height:60px;"></textarea>
             </div>
             <div class="modal-actions">
-                <button type="button" class="btn btn-outline" onclick="closeReroute()">Cancel</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('reroute-modal')">Cancel</button>
                 <button type="submit" class="btn btn-primary">Confirm Re-route</button>
             </div>
         </form>
@@ -227,16 +302,35 @@
 </div>
 
 <script>
-function openReroute(id, currentDept) {
+function openStatusModal(id, status, remark, deadline) {
+    document.getElementById('status-form').action   = '/admin/update/' + id;
+    document.getElementById('modal-status').value   = status;
+    document.getElementById('modal-remark').value   = remark;
+    document.getElementById('modal-deadline').value = deadline;
+    document.getElementById('status-modal').classList.add('open');
+}
+
+function openReroute(id, currentDept, currentCCs) {
     document.getElementById('reroute-form').action = '/admin/reroute/' + id;
-    document.getElementById('reroute-dept').value = currentDept;
+    document.getElementById('reroute-dept').value  = currentDept;
+    // Pre-select existing CCs
+    var ccSelect = document.getElementById('cc-depts');
+    for (var i = 0; i < ccSelect.options.length; i++) {
+        ccSelect.options[i].selected = currentCCs.indexOf(ccSelect.options[i].value) !== -1;
+    }
     document.getElementById('reroute-modal').classList.add('open');
 }
-function closeReroute() {
-    document.getElementById('reroute-modal').classList.remove('open');
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
 }
+
+// Close on backdrop click
+document.getElementById('status-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal('status-modal');
+});
 document.getElementById('reroute-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeReroute();
+    if (e.target === this) closeModal('reroute-modal');
 });
 </script>
 {% endblock %}
