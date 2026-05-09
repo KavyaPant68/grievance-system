@@ -60,13 +60,20 @@
                     <tr {% if c.is_overdue %}class="row-overdue"{% endif %}>
                         <td style="color:var(--ink-soft); font-size:.85rem;">{{ c.id }}</td>
                         <td>
-                            <strong>{{ c.title }}</strong>
+                            <a href="{{ url_for('complaint_detail', cid=c.id) }}"
+                               style="font-weight:700; color:var(--ink); text-decoration:none;">
+                                {{ c.title }}
+                            </a>
                             {% if c.is_overdue %}
                                 <span class="badge-overdue">⚠ Overdue</span>
                             {% endif %}
                             <div style="font-size:.8rem; color:var(--ink-soft); margin-top:.15rem;">
                                 {{ c.description[:80] }}{% if c.description|length > 80 %}…{% endif %}
                             </div>
+                            <a href="{{ url_for('complaint_detail', cid=c.id) }}"
+                               style="font-size:.78rem; color:var(--accent2); font-weight:600; text-decoration:none;">
+                                View full →
+                            </a>
                         </td>
                         <td>
                             <span class="badge badge-{{ c.category | lower }}">

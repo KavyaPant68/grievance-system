@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Complaint #{{ c.id }} — GrievanceIQ{% endblock %}
+
+{% block content %}
+<div class="page">
+
+    <!-- Back link -->
+    <div style="margin-bottom:1.25rem;">
+        {% if role == 'student' %}
+            <a href="{{ url_for('student_dashboard') }}" style="color:var(--ink-soft);text-decoration:none;font-size:.9rem;">← Back to My Complaints</a>
+        {% else %}
+            <a href="{{ url_for('admin_dashboard') }}" style="color:var(--ink-soft);text-decoration:none;font-size:.9rem;">← Back to Dashboard</a>
+        {% endif %}
+    </div>
+
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+        <div>
+            <h1 class="page-title" style="margin-bottom:.4rem;">{{ c.title }}</h1>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+                <span style="font-size:.85rem;color:var(--ink-soft);">Complaint #{{ c.id }}</span>
+                <span style="color:var(--border);">•</span>
+                {% if c.status == 'Pending' %}<span class="badge badge-pending">⏳ Pending</span>
+                {% elif c.status == 'In Progress' %}<span class="badge badge-progress">🔄 In Progress</span>
+                {% else %}<span class="badge badge-resolved">✅ Resolved</span>{% endif %}
+                {% if c.is_overdue %}<span class="badge-overdue">⚠ Overdue</span>{% endif %}
+            </div>
+        </div>
+        <div style="text-align:right;">
+            <div style="font-size:.82rem;color:var(--ink-soft);">Submitted by</div>
+            <div style="font-weight:600;">{{ c.student_name }}</div>
+            <div style="font-size:.8rem;color:var(--ink-soft);">{{ c.student_email }}</div>
+            <div style="font-size:.8rem;color:var(--ink-soft);margin-top:.2rem;">{{ c.submitted_at }}</div>
+        </div>
+    </div>
+
+    <!-- Full Description -->
+    <div class="detail-section">
+        <h2>📝 Full Description</h2>
+        <p style="font-size:.95rem;line-height:1.8;white-space:pre-wrap;color:var(--ink);">{{ c.description }}</p>
+        {% if c.attachment %}
+        <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border);">
+            <span style="font-size:.82rem;font-weight:600;color:var(--ink-soft);">ATTACHMENT</span><br>
+            <a href="{{ url_for('uploaded_file', filename=c.attachment) }}" target="_blank"
+               style="color:var(--accent2);font-weight:600;text-decoration:none;font-size:.9rem;">
+                📎 {{ c.attachment }}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Routing Info -->
+    <div class="detail-section">
+        <h2>🏷️ Routing & Classification</h2>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <label>Student Selected</label>
+                <p>
+                    <span class="badge badge-{{ c.category|lower }}">
+                        {% if c.category in departments %}{{ departments[c.category].icon }}{% endif %}
+                        {{ c.category }}
+                    </span>
+                </p>
+            </div>
+            <div class="detail-item">
+                <label>AI Predicted</label>
+                <p>
+                    <span class="badge badge-{{ c.ai_category|lower }}">
+                        {% if c.ai_category in departments %}{{ departments[c.ai_category].icon }}{% endif %}
+                        {{ c.ai_category }}
+                        {% if c.category != c.ai_category and c.category != 'Other' %}⚠️{% endif %}
+                    </span>
+                </p>
+            </div>
+            <div class="detail-item">
+                <label>Currently Routed To</label>
+                <p>
+                    <span style="font-weight:700;">
+                        {% if c.routed_to in departments %}{{ departments[c.routed_to].icon }}{% endif %}
+                        {{ departments[c.routed_to].label if c.routed_to in departments else c.routed_to }}
+                    </span>
+                </p>
+            </div>
+            <div class="detail-item">
+                <label>AI Source</label>
+                <p>
+                    {% if c.ai_source == 'ml_model' %}
+                        <span style="background:#dbeafe;color:#1e40af;font-size:.8rem;padding:2px 8px;border-radius:10px;font-weight:700;">ML Model</span>
+                    {% else %}
+                        <span style="background:#f3f4f6;color:#6b7280;font-size:.8rem;padding:2px 8px;border-radius:10px;font-weight:700;">Keyword Fallback</span>
+                    {% endif %}
+                </p>
+            </div>
+            {% if c.resolve_by %}
+            <div class="detail-item">
+                <label>Resolve By</label>
+                <p class="{% if c.is_overdue %}overdue-date{% endif %}">📅 {{ c.resolve_by }}</p>
+            </div>
+            {% endif %}
+            {% if cc_depts %}
+            <div class="detail-item">
+                <label>CC'd Departments</label>
+                <p>
+                    {% for dept in cc_depts %}
+                        <span class="badge-cc-dept">{{ departments[dept].icon }} {{ dept }}</span>
+                    {% endfor %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- AI Confidence -->
+        <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border);">
+            <div style="font-size:.75rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">
+                AI Confidence — {{ "%.1f"|format(c.ai_confidence * 100) }}%
+            </div>
+            <div style="max-width:400px;">
+                <div style="display:flex;align-items:center;gap:.75rem;">
+                    <div style="flex:1;background:var(--border);border-radius:4px;height:10px;">
+                        <div style="width:{{ [c.ai_confidence*100, 100]|min }}%;height:10px;border-radius:4px;
+                            background:{% if c.ai_confidence >= 0.75 %}#10b981{% elif c.ai_confidence >= 0.5 %}#f4a261{% else %}#e63946{% endif %};">
+                        </div>
+                    </div>
+                    <span style="font-weight:700;font-size:.9rem;width:40px;">{{ "%.0f"|format(c.ai_confidence*100) }}%</span>
+                </div>
+                <div style="font-size:.78rem;color:var(--ink-soft);margin-top:.4rem;">
+                    {% if c.ai_confidence >= 0.75 %}High confidence — AI is very certain about this classification.
+                    {% elif c.ai_confidence >= 0.45 %}Medium confidence — AI overrode student selection based on text analysis.
+                    {% else %}Low confidence — complaint was routed based on student's selection.{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Remark -->
+    {% if c.admin_remark %}
+    <div class="detail-section">
+        <h2>💬 Admin Remark</h2>
+        <div class="admin-remark-box" style="margin-top:0;">
+            <span class="remark-label">Note from department</span>
+            <p style="font-size:.92rem;color:var(--ink);margin-top:.25rem;">{{ c.admin_remark }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Reroute History -->
+    {% if reroutes %}
+    <div class="detail-section">
+        <h2>🔄 Re-route History</h2>
+        <ul class="timeline">
+            {% for r in reroutes %}
+            <li>
+                <div class="timeline-time">{{ r.rerouted_at }} — by {{ r.done_by_name }}</div>
+                <div class="timeline-text">
+                    Moved from
+                    <strong>{{ departments[r.from_dept].icon if r.from_dept in departments else '' }} {{ departments[r.from_dept].label if r.from_dept in departments else r.from_dept }}</strong>
+                    →
+                    <strong>{{ departments[r.to_dept].icon if r.to_dept in departments else '' }} {{ departments[r.to_dept].label if r.to_dept in departments else r.to_dept }}</strong>
+                    {% if r.note %}
+                        <br><span style="color:var(--ink-soft);font-size:.83rem;">Reason: {{ r.note }}</span>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <div class="detail-section">
+        <h2>🔄 Re-route History</h2>
+        <p style="color:var(--ink-soft);font-size:.9rem;">No re-routes — complaint went directly to {{ departments[c.routed_to].label if c.routed_to in departments else c.routed_to }}.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
