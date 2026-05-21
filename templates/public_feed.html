@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Public Feed — GrievanceIQ{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .feed-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem; }
+    .unit-badge { background:rgba(69,123,157,.12); color:var(--accent2); font-weight:700; font-size:.85rem; padding:.3rem .9rem; border-radius:20px; }
+    .feed-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:1.25rem; }
+    .feed-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:1.25rem; display:flex; flex-direction:column; gap:.75rem; }
+    .feed-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:.75rem; }
+    .feed-card-title { font-weight:700; font-size:.95rem; color:var(--ink); flex:1; }
+    .upvote-btn { display:flex; flex-direction:column; align-items:center; gap:.15rem; background:none; border:1.5px solid var(--border); border-radius:8px; padding:.35rem .6rem; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all .15s; min-width:48px; }
+    .upvote-btn:hover { border-color:var(--accent); background:rgba(230,57,70,.05); }
+    .upvote-btn.voted { border-color:var(--accent); background:rgba(230,57,70,.08); }
+    .upvote-btn .arrow { font-size:1rem; }
+    .upvote-btn .count { font-size:.78rem; font-weight:700; color:var(--accent); }
+    .feed-desc { font-size:.85rem; color:var(--ink-soft); line-height:1.55; }
+    .feed-meta { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; font-size:.78rem; color:var(--ink-soft); border-top:1px solid var(--border); padding-top:.65rem; margin-top:auto; }
+    .feed-anon { font-size:.78rem; color:var(--ink-soft); font-style:italic; }
+    .hot-badge { background:#fee2e2; color:#991b1b; font-size:.68rem; font-weight:700; padding:2px 7px; border-radius:10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div class="feed-header">
+        <div>
+            <h1 class="page-title">📢 Department Public Feed</h1>
+            <p class="page-subtitle">Active issues reported by students in your department. Upvote to increase priority.</p>
+        </div>
+        <div style="display:flex;gap:.75rem;align-items:center;">
+            <span class="unit-badge">🏫 {{ academic_unit }}</span>
+            <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent">+ Report Issue</a>
+        </div>
+    </div>
+
+    {% if feed %}
+    <div class="feed-grid">
+        {% for c in feed %}
+        <div class="feed-card">
+            <div class="feed-card-top">
+                <div>
+                    <div class="feed-card-title">
+                        {{ c.title }}
+                        {% if c.upvote_count >= 5 %}
+                            <span class="hot-badge">🔥 Hot</span>
+                        {% endif %}
+                    </div>
+                    <div style="margin-top:.25rem;">
+                        <span class="badge badge-{{ c.routed_to|lower }}">
+                            {% if c.routed_to in departments %}{{ departments[c.routed_to].icon }}{% endif %}
+                            {{ c.routed_to }}
+                        </span>
+                        <span class="badge badge-{{ c.status|lower|replace(' ','-') }}" style="margin-left:.3rem;">
+                            {{ c.status }}
+                        </span>
+                    </div>
+                </div>
+                <!-- Upvote button -->
+                <form method="POST" action="{{ url_for('upvote_complaint', cid=c.id) }}">
+                    <button type="submit"
+                            class="upvote-btn {% if c.id in upvoted_ids %}voted{% endif %}"
+                            {% if c.id in upvoted_ids %}title="Already upvoted"{% endif %}>
+                        <span class="arrow">▲</span>
+                        <span class="count">{{ c.upvote_count }}</span>
+                    </button>
+                </form>
+            </div>
+
+            <p class="feed-desc">
+                {{ c.description[:120] }}{% if c.description|length > 120 %}…{% endif %}
+            </p>
+
+            <div class="feed-meta">
+                {% if c.is_anonymous %}
+                    <span class="feed-anon">🔒 Anonymous</span>
+                {% else %}
+                    <span>👤 {{ c.display_name }}</span>
+                {% endif %}
+                <span>🕐 {{ c.submitted_at }}</span>
+                <a href="{{ url_for('complaint_detail', cid=c.id) }}"
+                   style="margin-left:auto;font-size:.78rem;color:var(--accent2);font-weight:600;text-decoration:none;">
+                    View detail →
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">📭</div>
+        <p>No public complaints in the <strong>{{ academic_unit }}</strong> department yet.</p>
+        <p style="font-size:.85rem;margin-top:.5rem;">Be the first to report a public issue so others can upvote it!</p>
+        <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent" style="margin-top:1rem;">Report an Issue</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

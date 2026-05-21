@@ -18,7 +18,7 @@
     .dept-head-banner p { font-size:.85rem; color:rgba(255,255,255,.65); margin-top:.15rem; }
 
     .conf-bar-wrap { width:80px; background:#e9e9e9; border-radius:4px; height:6px; margin-top:.3rem; }
-    .conf-bar { height:6px; border-radius:4px; transition:width .3s; }
+    .conf-bar { height:6px; border-radius:4px; }
     .conf-high   { background:#10b981; }
     .conf-medium { background:#f4a261; }
     .conf-low    { background:#e63946; }
@@ -40,13 +40,14 @@
     .modal-actions { display:flex; gap:.75rem; margin-top:1.25rem; justify-content:flex-end; }
 
     .mismatch-row td { background:#fffbeb; }
-    .status-form { display:inline-flex; gap:.4rem; align-items:center; }
-    .status-form select { padding:.28rem .45rem; font-size:.8rem; border-radius:6px; }
     .reroute-btn { background:none; border:1px solid var(--border); border-radius:6px; padding:.25rem .6rem; font-size:.78rem; cursor:pointer; color:var(--ink-soft); font-family:'DM Sans',sans-serif; }
     .reroute-btn:hover { background:var(--surface); color:var(--ink); }
-    .readonly-cc { font-size:.78rem; color:var(--ink-soft); font-style:italic; }
     .detail-link { font-size:.78rem; color:var(--accent2); text-decoration:none; font-weight:600; display:inline-block; margin-top:.3rem; }
     .detail-link:hover { text-decoration:underline; }
+    .upvote-bubble { display:inline-flex; align-items:center; gap:.25rem; background:#fee2e2; color:#991b1b; font-size:.72rem; font-weight:700; padding:2px 7px; border-radius:10px; }
+    .masked-identity { color:var(--ink-soft); font-style:italic; font-size:.85rem; }
+    .reveal-btn { background:none; border:1px solid var(--accent); color:var(--accent); border-radius:6px; padding:.2rem .5rem; font-size:.72rem; cursor:pointer; font-family:'DM Sans',sans-serif; margin-left:.4rem; }
+    .reveal-btn:hover { background:rgba(230,57,70,.08); }
 </style>
 {% endblock %}
 
@@ -126,9 +127,9 @@
                         <th>#</th>
                         <th>Student</th>
                         <th>Complaint</th>
-                        <th>Student selected</th>
-                        <th>AI verdict + confidence</th>
-                        <th>Routed to</th>
+                        <th>Student Selected</th>
+                        <th>AI Verdict + Confidence</th>
+                        <th>Routed To</th>
                         <th>Deadline</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -139,15 +140,35 @@
                 {% set conf = c.ai_confidence * 100 %}
                 {% set is_mismatch = (c.category != c.ai_category and c.category != 'Other') %}
                 <tr {% if c.is_overdue %}class="row-overdue"{% elif is_mismatch %}class="mismatch-row"{% endif %}>
+
                     <td style="color:var(--ink-soft);font-size:.82rem;">{{ c.id }}</td>
+
                     <td>
-                        <strong style="font-size:.88rem;">{{ c.student_name }}</strong>
-                        <div style="font-size:.76rem;color:var(--ink-soft);">{{ c.student_email }}</div>
+                        {% if c.is_anonymous and not is_super %}
+                            <!-- Dept admin sees masked identity -->
+                            <span class="masked-identity">🔒 Masked Identity</span>
+                            <div style="font-size:.74rem;color:var(--ink-soft);">—</div>
+                        {% else %}
+                            <strong style="font-size:.88rem;">{{ c.student_name }}</strong>
+                            <div style="font-size:.76rem;color:var(--ink-soft);">{{ c.student_email }}</div>
+                            {% if c.is_anonymous and is_super %}
+                                <!-- Superadmin sees real name + reveal button -->
+                                <div style="margin-top:.2rem;">
+                                    <span style="font-size:.7rem;background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:6px;">🔒 Anonymous</span>
+                                    <button class="reveal-btn"
+                                        onclick="openRevealModal({{ c.id }})">Reveal ▸</button>
+                                </div>
+                            {% endif %}
+                        {% endif %}
                     </td>
+
                     <td style="max-width:220px;">
                         <strong style="font-size:.85rem;">{{ c.title }}</strong>
                         {% if c.cc_dept_label %}<span class="badge-cc">CC</span>{% endif %}
                         {% if c.is_overdue %}<span class="badge-overdue">⚠ Overdue</span>{% endif %}
+                        {% if c.upvote_count > 0 %}
+                            <span class="upvote-bubble">▲ {{ c.upvote_count }} affected</span>
+                        {% endif %}
                         <div style="font-size:.76rem;color:var(--ink-soft);margin-top:.1rem;">
                             {{ c.description[:65] }}{% if c.description|length>65 %}…{% endif %}
                         </div>
@@ -169,12 +190,14 @@
                         {% endif %}
                         <a href="{{ url_for('complaint_detail', cid=c.id) }}" class="detail-link">🔍 Full detail →</a>
                     </td>
+
                     <td>
                         <span class="badge badge-{{ c.category|lower }}">
                             {% if c.category in departments %}{{ departments[c.category].icon }}{% endif %}
                             {{ c.category }}
                         </span>
                     </td>
+
                     <td>
                         <span class="badge badge-{{ c.ai_category|lower }}">
                             {% if c.ai_category in departments %}{{ departments[c.ai_category].icon }}{% endif %}
@@ -191,12 +214,14 @@
                             </span>
                         </div>
                     </td>
+
                     <td>
                         <span style="font-weight:600;font-size:.85rem;">
                             {% if c.routed_to in departments %}{{ departments[c.routed_to].icon }}{% endif %}
                             {{ departments[c.routed_to].label if c.routed_to in departments else c.routed_to }}
                         </span>
                     </td>
+
                     <td>
                         {% if c.resolve_by %}
                             <span class="{% if c.is_overdue %}overdue-date{% endif %}" style="font-size:.82rem;">{{ c.resolve_by }}</span>
@@ -204,11 +229,13 @@
                             <span style="color:var(--ink-soft);font-size:.8rem;">—</span>
                         {% endif %}
                     </td>
+
                     <td>
                         {% if c.status=='Pending' %}<span class="badge badge-pending">⏳ Pending</span>
                         {% elif c.status=='In Progress' %}<span class="badge badge-progress">🔄 In Progress</span>
                         {% else %}<span class="badge badge-resolved">✅ Resolved</span>{% endif %}
                     </td>
+
                     <td>
                         <button class="btn btn-primary btn-sm"
                             onclick="openStatusModal({{ c.id }}, '{{ c.status }}', `{{ c.admin_remark or '' }}`, '{{ c.resolve_by or '' }}')">
@@ -223,6 +250,7 @@
                         <div style="font-size:.75rem;color:var(--ink-soft);margin-top:.3rem;">CC — can update</div>
                         {% endif %}
                     </td>
+
                 </tr>
                 {% endfor %}
                 </tbody>
@@ -299,6 +327,28 @@
     </div>
 </div>
 
+<!-- REVEAL IDENTITY MODAL (superadmin only) -->
+{% if is_super %}
+<div class="modal-overlay" id="reveal-modal">
+    <div class="modal">
+        <h3>🔓 Reveal Anonymous Identity</h3>
+        <p style="font-size:.88rem;color:var(--ink-soft);margin-bottom:1.25rem;">
+            This action is logged permanently in the audit trail. Please provide a reason.
+        </p>
+        <form method="POST" action="" id="reveal-form">
+            <div class="form-group">
+                <label>Reason for Revealing Identity</label>
+                <textarea name="reason" placeholder="e.g. Repeated spam complaints detected from this source..." required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeModal('reveal-modal')">Cancel</button>
+                <button type="submit" class="btn btn-accent">Reveal & Log</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <script>
 function openStatusModal(id, status, remark, deadline) {
     document.getElementById('status-form').action   = '/admin/update/' + id;
@@ -316,6 +366,10 @@ function openReroute(id, currentDept, currentCCs) {
     }
     document.getElementById('reroute-modal').classList.add('open');
 }
+function openRevealModal(id) {
+    document.getElementById('reveal-form').action = '/admin/reveal_identity/' + id;
+    document.getElementById('reveal-modal').classList.add('open');
+}
 function closeModal(id) {
     document.getElementById(id).classList.remove('open');
 }
@@ -325,5 +379,10 @@ document.getElementById('status-modal').addEventListener('click', function(e) {
 document.getElementById('reroute-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal('reroute-modal');
 });
+{% if is_super %}
+document.getElementById('reveal-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal('reveal-modal');
+});
+{% endif %}
 </script>
 {% endblock %}

@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
         :root {
             --ink:      #1a1a2e;
             --ink-soft: #4a4a6a;
@@ -21,7 +20,6 @@
             --shadow:   0 4px 24px rgba(26,26,46,.10);
             --radius:   12px;
         }
-
         body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); min-height: 100vh; line-height: 1.6; }
 
         /* NAV */
@@ -38,22 +36,7 @@
         .bell-wrap { position: relative; display: inline-flex; align-items: center; }
         .bell-wrap a { font-size: 1.1rem; color: rgba(255,255,255,.75); text-decoration: none; transition: color .2s; }
         .bell-wrap a:hover { color: var(--white); }
-        .bell-badge {
-            position: absolute;
-            top: -6px; right: -8px;
-            background: var(--accent);
-            color: #fff;
-            font-size: .6rem;
-            font-weight: 700;
-            min-width: 16px;
-            height: 16px;
-            border-radius: 99px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 3px;
-            line-height: 1;
-        }
+        .bell-badge { position: absolute; top: -6px; right: -8px; background: var(--accent); color: #fff; font-size: .6rem; font-weight: 700; min-width: 16px; height: 16px; border-radius: 99px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
 
         /* FLASH */
         .flash-container { padding: .75rem 2rem 0; }
@@ -116,7 +99,7 @@
         /* FORMS */
         .form-group { margin-bottom: 1.25rem; }
         label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: .4rem; }
-        input[type="text"], input[type="email"], input[type="password"], textarea, select {
+        input[type="text"], input[type="email"], input[type="password"], input[type="file"], textarea, select {
             width: 100%; padding: .7rem 1rem; border: 1.5px solid var(--border); border-radius: 8px;
             font-family: 'DM Sans', sans-serif; font-size: .95rem; background: var(--white); color: var(--ink);
             transition: border-color .2s, box-shadow .2s; outline: none;
@@ -136,7 +119,6 @@
         .row-overdue td { background: rgba(230,57,70,.05) !important; }
         .badge-overdue { background: var(--accent); color: #fff; font-size: .7rem; padding: 2px 7px; border-radius: 10px; margin-left: 4px; font-weight: 700; }
         .overdue-date { color: var(--accent); font-weight: 600; }
-        .alert-overdue { background: rgba(230,57,70,.08); border-left: 4px solid var(--accent); padding: .5rem .9rem; border-radius: 6px; color: #991b1b; font-size: .82rem; margin-top: .35rem; }
 
         /* ADMIN REMARK */
         .admin-remark-box { background: rgba(69,123,157,.07); border-left: 4px solid var(--accent2); border-radius: 6px; padding: .5rem .9rem; margin-top: .35rem; }
@@ -147,27 +129,24 @@
         .badge-cc { background: #7b2d8b; color: #fff; font-size: .68rem; padding: 2px 7px; border-radius: 10px; margin-left: 4px; font-weight: 700; }
         .badge-cc-dept { background: rgba(123,45,139,.10); color: #7b2d8b; border: 1px solid rgba(123,45,139,.25); font-size: .72rem; padding: 2px 7px; border-radius: 10px; margin-right: 3px; font-weight: 600; }
 
+        /* ANON BADGE */
+        .badge-anon { background: #1a1a2e; color: #fff; font-size: .7rem; padding: 2px 7px; border-radius: 10px; font-weight: 700; }
+
         /* DEADLINE */
         .deadline-info { font-size: .82rem; color: var(--ink-soft); margin-top: .25rem; }
 
-        /* DETAIL PAGE */
+        /* DETAIL */
         .detail-section { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.75rem; margin-bottom: 1.5rem; }
         .detail-section h2 { font-family: 'DM Serif Display', serif; font-size: 1.2rem; margin-bottom: 1rem; padding-bottom: .6rem; border-bottom: 1px solid var(--border); }
         .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-        .detail-item label { font-size: .75rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .2rem; }
+        .detail-item label { font-size: .75rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .2rem; display: block; }
         .detail-item p { font-size: .9rem; color: var(--ink); font-weight: 500; }
         .timeline { list-style: none; position: relative; padding-left: 1.5rem; }
-        .timeline::before { content:''; position:absolute; left:6px; top:4px; bottom:4px; width:2px; background: var(--border); }
+        .timeline::before { content: ''; position: absolute; left: 6px; top: 4px; bottom: 4px; width: 2px; background: var(--border); }
         .timeline li { position: relative; margin-bottom: 1rem; }
-        .timeline li::before { content:''; position:absolute; left:-1.2rem; top:5px; width:10px; height:10px; border-radius:50%; background: var(--accent2); border: 2px solid var(--white); box-shadow: 0 0 0 2px var(--accent2); }
+        .timeline li::before { content: ''; position: absolute; left: -1.2rem; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent2); border: 2px solid var(--white); box-shadow: 0 0 0 2px var(--accent2); }
         .timeline-time { font-size: .75rem; color: var(--ink-soft); margin-bottom: .15rem; }
         .timeline-text { font-size: .88rem; color: var(--ink); }
-        .conf-breakdown { display: flex; flex-direction: column; gap: .5rem; }
-        .conf-row { display: flex; align-items: center; gap: .75rem; font-size: .85rem; }
-        .conf-row-label { width: 100px; flex-shrink: 0; color: var(--ink-soft); }
-        .conf-row-bar-wrap { flex: 1; background: var(--border); border-radius: 4px; height: 8px; }
-        .conf-row-bar { height: 8px; border-radius: 4px; background: var(--accent2); }
-        .conf-row-pct { width: 40px; text-align: right; font-weight: 600; color: var(--ink); }
     </style>
     {% block extra_styles %}{% endblock %}
 </head>
@@ -176,7 +155,7 @@
 <nav>
     <div style="display:flex; align-items:center;">
         <a class="nav-brand" href="#">Grievance<span>IQ</span></a>
-        {% if session.user_department %}
+        {% if session.user_department and session.user_department in departments %}
             <span class="nav-dept-tag">
                 {{ departments[session.user_department].icon }}
                 {{ departments[session.user_department].label }}
@@ -188,6 +167,7 @@
     <div class="nav-links">
         {% if session.user_role == 'student' %}
             <a href="{{ url_for('student_dashboard') }}">My Complaints</a>
+            <a href="{{ url_for('public_feed') }}">📢 Feed</a>
             <a href="{{ url_for('submit_complaint') }}">+ Submit</a>
             <div class="bell-wrap">
                 <a href="{{ url_for('notifications') }}" title="Notifications">🔔</a>

@@ -3,158 +3,97 @@
 
 {% block extra_styles %}
 <style>
-    .submit-wrapper { max-width: 700px; margin: 2.5rem auto; padding: 0 1rem; }
-    .back-link { display: inline-flex; align-items: center; gap: .4rem; color: var(--ink-soft); text-decoration: none; font-size: .9rem; margin-bottom: 1.25rem; }
-    .back-link:hover { color: var(--ink); }
-
-    .ai-info { background: linear-gradient(135deg, #e0f2fe, #ede9fe); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.75rem; font-size: .88rem; color: #1e3a5f; display: flex; gap: .75rem; }
-    .ai-info .icon { font-size: 1.3rem; flex-shrink: 0; }
-
-    /* Department grid */
-    .dept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .75rem; margin-top: .5rem; }
-    .dept-option { display: none; }
-    .dept-label { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; padding: 1rem .75rem; border: 2px solid var(--border); border-radius: 10px; cursor: pointer; transition: all .18s; background: var(--white); text-align: center; }
-    .dept-label .d-icon { font-size: 1.7rem; }
-    .dept-label .d-name { font-size: .82rem; font-weight: 600; color: var(--ink); line-height: 1.2; }
-    .dept-option:checked + .dept-label { border-color: var(--accent2); background: #e8f4fd; }
-    .dept-label:hover { border-color: #a0bfcf; background: #f5fafd; }
-
-    /* Other note */
-    .other-note { background: #f8f7f4; border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; margin-top: .75rem; font-size: .85rem; color: var(--ink-soft); display: none; }
-    #cat-other:checked ~ .other-note { display: block; }
-
-    .submit-btn { width: 100%; padding: .9rem; background: var(--ink); color: var(--white); border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: .5rem; transition: background .2s; }
-    .submit-btn:hover { background: #2d2d4a; }
-
-    /* File upload */
-    .file-drop { border: 2px dashed var(--border); border-radius: 10px; background: var(--surface); transition: border-color .2s; }
-    .file-drop:hover { border-color: var(--accent2); }
-    .file-drop-inner { padding: 1.5rem; text-align: center; cursor: pointer; }
-    .file-icon { font-size: 2rem; margin-bottom: .4rem; }
-    .file-text { font-size: .9rem; font-weight: 600; color: var(--ink); }
-    .file-hint { font-size: .78rem; color: var(--ink-soft); margin-top: .2rem; }
-    .file-preview { display: flex; align-items: center; justify-content: space-between; padding: .75rem 1rem; background: #e8f4fd; border-top: 1px solid var(--border); border-radius: 0 0 8px 8px; font-size: .88rem; font-weight: 500; }
-    .file-clear { background: none; border: none; cursor: pointer; color: var(--accent); font-size: .85rem; font-weight: 600; }
+    .submit-wrap { max-width:680px; margin:0 auto; }
+    .toggle-card { background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.5rem; margin-bottom:1rem; display:flex; align-items:flex-start; gap:1rem; cursor:pointer; transition:border-color .2s; }
+    .toggle-card:hover { border-color:var(--accent2); }
+    .toggle-card input[type="checkbox"] { width:18px; height:18px; flex-shrink:0; margin-top:2px; accent-color:var(--accent2); cursor:pointer; }
+    .toggle-card-body { flex:1; }
+    .toggle-card-title { font-weight:600; font-size:.92rem; color:var(--ink); }
+    .toggle-card-desc  { font-size:.8rem; color:var(--ink-soft); margin-top:.2rem; line-height:1.5; }
+    .section-label { font-size:.78rem; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; margin:1.5rem 0 .75rem; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="submit-wrapper">
-    <a href="{{ url_for('student_dashboard') }}" class="back-link">← Back to Dashboard</a>
-
-    <h1 class="page-title">Submit a Complaint</h1>
-    <p class="page-subtitle">Describe your issue and select the most relevant department. Our AI will verify and route it automatically.</p>
-
-    <div class="ai-info">
-        <span class="icon">🤖</span>
-        <div>
-            <strong>How AI Routing Works:</strong> After you submit, our system scans your title and description for department-specific keywords and verifies the category you selected. The complaint is then routed to the correct department head — not just a general inbox.
+<div class="page">
+    <div class="submit-wrap">
+        <div style="margin-bottom:1.5rem;">
+            <h1 class="page-title">Submit a Complaint</h1>
+            <p class="page-subtitle">Describe your issue clearly. Our AI will route it to the right department automatically.</p>
         </div>
-    </div>
 
-    <div class="card">
-        <div class="card-body">
-            <form method="POST" action="{{ url_for('submit_complaint') }}"
-                  enctype="multipart/form-data">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('submit_complaint') }}" enctype="multipart/form-data">
 
-                <div class="form-group">
-                    <label for="title">Complaint Title</label>
-                    <input type="text" id="title" name="title"
-                           placeholder="e.g. WiFi not working in hostel block B" required maxlength="150">
-                </div>
-
-                <div class="form-group">
-                    <label for="description">Detailed Description</label>
-                    <textarea id="description" name="description"
-                              placeholder="Describe your issue clearly — when it started, how it affects you, what you have tried..." required></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label>Select Department</label>
-                    <div class="dept-grid">
-                        {% for key, dept in departments.items() %}
-                        {% if key != 'General' %}
-                        <div>
-                            <input type="radio" name="category" id="cat-{{ key }}"
-                                   class="dept-option" value="{{ key }}" required>
-                            <label for="cat-{{ key }}" class="dept-label">
-                                <span class="d-icon">{{ dept.icon }}</span>
-                                <span class="d-name">{{ dept.label }}</span>
-                            </label>
-                        </div>
-                        {% endif %}
-                        {% endfor %}
-
-                        <!-- Other option -->
-                        <div>
-                            <input type="radio" name="category" id="cat-Other"
-                                   class="dept-option" value="Other">
-                            <label for="cat-Other" class="dept-label">
-                                <span class="d-icon">📋</span>
-                                <span class="d-name">Other</span>
-                            </label>
-                        </div>
+                    <div class="form-group">
+                        <label for="title">Complaint Title</label>
+                        <input type="text" id="title" name="title"
+                               placeholder="e.g. WiFi not working in hostel block B" required>
                     </div>
 
-                    <!-- Shown only when Other is selected -->
-                    <div class="other-note" id="other-note">
-                        ℹ️ Complaints marked as <strong>Other</strong> go directly to the <strong>General Admin inbox</strong> for manual review and routing.
+                    <div class="form-group">
+                        <label for="description">Detailed Description</label>
+                        <textarea id="description" name="description" rows="5"
+                                  placeholder="Describe the issue in detail — location, since when, what you've tried..." required></textarea>
                     </div>
-                </div>
 
-                <!-- FILE ATTACHMENT -->
-                <div class="form-group">
-                    <label>Attach Evidence <span style="color:var(--ink-soft);font-weight:400;">(optional — screenshot, photo, marksheet, etc.)</span></label>
-                    <div class="file-drop" id="file-drop">
-                        <input type="file" id="attachment" name="attachment"
-                               accept=".jpg,.jpeg,.png,.pdf">
-                        <div class="file-drop-inner"
-                             onclick="document.getElementById('attachment').click()">
-                            <div class="file-icon">📎</div>
-                            <div class="file-text">Click to choose a file</div>
-                            <div class="file-hint">JPG, PNG or PDF — max 5 MB</div>
-                        </div>
-                        <div class="file-preview" id="file-preview">
-                            <span id="file-name"></span>
-                            <button type="button" onclick="clearFile()" class="file-clear">✕ Remove</button>
-                        </div>
+                    <div class="form-group">
+                        <label for="category">Department (your best guess)</label>
+                        <select id="category" name="category" required>
+                            <option value="">— Select Department —</option>
+                            {% for key, dept in departments.items() %}
+                            <option value="{{ key }}">{{ dept.icon }} {{ dept.label }}</option>
+                            {% endfor %}
+                            <option value="Other">🔀 Other / Not Sure</option>
+                        </select>
+                        <small style="color:var(--ink-soft);font-size:.78rem;margin-top:.3rem;display:block;">
+                            The AI will verify and correct this if needed.
+                        </small>
                     </div>
-                </div>
 
-                <button type="submit" class="submit-btn">Submit & Route Complaint →</button>
-            </form>
+                    <div class="form-group">
+                        <label for="attachment">Attachment <span style="font-weight:400;color:var(--ink-soft)">(optional — JPG, PNG, PDF, max 5 MB)</span></label>
+                        <input type="file" id="attachment" name="attachment" accept=".jpg,.jpeg,.png,.pdf">
+                    </div>
+
+                    <p class="section-label">Privacy & Visibility Options</p>
+
+                    <!-- Anonymous toggle -->
+                    <label class="toggle-card" for="is_anonymous">
+                        <input type="checkbox" id="is_anonymous" name="is_anonymous">
+                        <div class="toggle-card-body">
+                            <div class="toggle-card-title">🔒 Submit anonymously</div>
+                            <div class="toggle-card-desc">
+                                Your name will be hidden from department heads.
+                                The system still tracks your identity for accountability,
+                                and only the Super Admin can reveal it if abuse is detected.
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- Public toggle -->
+                    <label class="toggle-card" for="is_public">
+                        <input type="checkbox" id="is_public" name="is_public">
+                        <div class="toggle-card-body">
+                            <div class="toggle-card-title">📢 Show on department public feed</div>
+                            <div class="toggle-card-desc">
+                                Other students in your department
+                                ({{ session.academic_unit or 'your academic unit' }})
+                                can see this issue and upvote it.
+                                Issues with more upvotes get higher priority on the admin dashboard.
+                                Our AI will also check if this issue was already reported — if so,
+                                your vote will be added to the existing complaint instead.
+                            </div>
+                        </div>
+                    </label>
+
+                    <button type="submit" class="btn btn-accent" style="width:100%;padding:.85rem;font-size:1rem;margin-top:1rem;">
+                        Submit Complaint →
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
-
-<script>
-    // Show/hide Other note
-    document.querySelectorAll('.dept-option').forEach(radio => {
-        radio.addEventListener('change', function () {
-            document.getElementById('other-note').style.display =
-                this.value === 'Other' ? 'block' : 'none';
-        });
-    });
-
-    // File upload preview
-    const fileInput  = document.getElementById('attachment');
-    const preview    = document.getElementById('file-preview');
-    const fileNameEl = document.getElementById('file-name');
-    const dropInner  = document.querySelector('.file-drop-inner');
-
-    fileInput.addEventListener('change', function () {
-        if (this.files && this.files[0]) {
-            const f = this.files[0];
-            fileNameEl.textContent = '📄 ' + f.name + '  (' + (f.size/1024).toFixed(0) + ' KB)';
-            preview.style.display    = 'flex';
-            dropInner.style.display  = 'none';
-        }
-    });
-
-    function clearFile() {
-        fileInput.value          = '';
-        preview.style.display    = 'none';
-        dropInner.style.display  = 'block';
-    }
-</script>
 {% endblock %}

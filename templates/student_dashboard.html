@@ -9,7 +9,10 @@
             <h1 class="page-title">Hello, {{ session.user_name }} 👋</h1>
             <p class="page-subtitle">Track all your submitted complaints and their routing below.</p>
         </div>
-        <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent">+ New Complaint</a>
+        <div style="display:flex;gap:.75rem;">
+            <a href="{{ url_for('public_feed') }}" class="btn btn-outline">📢 Public Feed</a>
+            <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent">+ New Complaint</a>
+        </div>
     </div>
 
     <!-- Stats -->
@@ -32,7 +35,7 @@
         </div>
     </div>
 
-    <!-- Complaints -->
+    <!-- Complaints Table -->
     <div class="card">
         <div class="card-header">
             <span style="font-weight:600;">Your Complaints</span>
@@ -53,12 +56,14 @@
                         <th>Deadline</th>
                         <th>Status</th>
                         <th>Date</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for c in complaints %}
                     <tr {% if c.is_overdue %}class="row-overdue"{% endif %}>
                         <td style="color:var(--ink-soft); font-size:.85rem;">{{ c.id }}</td>
+
                         <td>
                             <a href="{{ url_for('complaint_detail', cid=c.id) }}"
                                style="font-weight:700; color:var(--ink); text-decoration:none;">
@@ -66,6 +71,15 @@
                             </a>
                             {% if c.is_overdue %}
                                 <span class="badge-overdue">⚠ Overdue</span>
+                            {% endif %}
+                            {% if c.is_anonymous %}
+                                <span class="badge-anon">🔒 Anonymous</span>
+                            {% endif %}
+                            {% if c.is_public %}
+                                <span style="font-size:.72rem;background:#dbeafe;color:#1e40af;padding:2px 7px;border-radius:10px;font-weight:700;">📢 Public</span>
+                            {% endif %}
+                            {% if c.upvote_count > 0 %}
+                                <span style="font-size:.72rem;background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:10px;font-weight:700;">▲ {{ c.upvote_count }}</span>
                             {% endif %}
                             <div style="font-size:.8rem; color:var(--ink-soft); margin-top:.15rem;">
                                 {{ c.description[:80] }}{% if c.description|length > 80 %}…{% endif %}
@@ -75,12 +89,14 @@
                                 View full →
                             </a>
                         </td>
+
                         <td>
                             <span class="badge badge-{{ c.category | lower }}">
                                 {% if c.category in departments %}{{ departments[c.category].icon }}{% endif %}
                                 {{ c.category }}
                             </span>
                         </td>
+
                         <td>
                             <span class="badge badge-{{ c.ai_category | lower }}
                                 {% if c.category != c.ai_category and c.category != 'Other' %} badge-mismatch{% endif %}">
@@ -89,6 +105,7 @@
                                 {% if c.category != c.ai_category and c.category != 'Other' %}⚠️{% endif %}
                             </span>
                         </td>
+
                         <td>
                             {% if c.routed_to in departments %}
                                 <span style="font-weight:600;">
@@ -99,6 +116,7 @@
                                 {{ c.routed_to }}
                             {% endif %}
                         </td>
+
                         <td>
                             {% if c.attachment %}
                                 <a href="{{ url_for('uploaded_file', filename=c.attachment) }}"
@@ -110,6 +128,7 @@
                                 <span style="font-size:.8rem; color:var(--ink-soft);">—</span>
                             {% endif %}
                         </td>
+
                         <td style="max-width:180px;">
                             {% if c.admin_remark %}
                                 <div class="admin-remark-box">
@@ -120,6 +139,7 @@
                                 <span style="font-size:.8rem; color:var(--ink-soft);">—</span>
                             {% endif %}
                         </td>
+
                         <td>
                             {% if c.resolve_by %}
                                 <span class="deadline-info {% if c.is_overdue %}overdue-date{% endif %}">
@@ -130,6 +150,7 @@
                                 <span style="font-size:.8rem; color:var(--ink-soft);">—</span>
                             {% endif %}
                         </td>
+
                         <td>
                             {% if c.status == 'Pending' %}
                                 <span class="badge badge-pending">⏳ Pending</span>
@@ -139,7 +160,50 @@
                                 <span class="badge badge-resolved">✅ Resolved</span>
                             {% endif %}
                         </td>
+
                         <td style="font-size:.82rem; color:var(--ink-soft);">{{ c.submitted_at }}</td>
+
+                        <td>
+                            {#
+                                Withdraw button logic:
+                                - Only show if status is Pending or In Progress
+                                - Resolved complaints are locked — no withdrawal allowed
+                                - JS confirm() prevents accidental clicks
+                                - Uses POST form (not a link) for security —
+                                  GET requests should never cause data deletion
+                            #}
+                            {% if c.status != 'Resolved' %}
+                            <form method="POST"
+                                  action="{{ url_for('withdraw_complaint', complaint_id=c.id) }}"
+                                  style="display:inline;">
+                                <button
+                                    type="submit"
+                                    onclick="return confirm('Are you sure you want to withdraw this complaint?\n\n\'{{ c.title }}\'\n\nThis action is permanent and cannot be undone.')"
+                                    style="
+                                        background: none;
+                                        border: 1.5px solid var(--accent);
+                                        color: var(--accent);
+                                        border-radius: 6px;
+                                        padding: .25rem .65rem;
+                                        font-size: .78rem;
+                                        font-weight: 600;
+                                        cursor: pointer;
+                                        font-family: 'DM Sans', sans-serif;
+                                        transition: background .15s, color .15s;
+                                    "
+                                    onmouseover="this.style.background='rgba(230,57,70,.08)'"
+                                    onmouseout="this.style.background='none'"
+                                >
+                                    🗑 Withdraw
+                                </button>
+                            </form>
+                            {% else %}
+                            {# Resolved — show a locked indicator instead of the button #}
+                            <span style="font-size:.75rem; color:var(--ink-soft); font-style:italic;">
+                                Locked ✅
+                            </span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -149,7 +213,9 @@
         <div class="empty-state">
             <div class="icon">📭</div>
             <p>No complaints yet. Submit your first one!</p>
-            <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent" style="margin-top:1rem;">Submit a Complaint</a>
+            <a href="{{ url_for('submit_complaint') }}" class="btn btn-accent" style="margin-top:1rem;">
+                Submit a Complaint
+            </a>
         </div>
         {% endif %}
     </div>
