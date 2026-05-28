@@ -323,6 +323,7 @@ TRAINING_DATA = [
     ("The library stock verification is done during exam time affecting student access", "Library"),
     ("I applied for a library no objection certificate for hostel clearance but it is pending", "Library"),
     ("The library study area does not have enough power sockets for laptop charging", "Library"),
+    
 
     # ── TRANSPORT (80 samples) ───────────────────────────────
     ("The college bus is always 30 to 40 minutes late every morning", "Transport"),

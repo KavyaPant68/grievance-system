@@ -3,7 +3,7 @@
 
 {% block extra_styles %}
 <style>
-    body { display: flex; flex-direction: column; }
+    body { display:flex; flex-direction:column; }
     .auth-wrapper { flex:1; display:flex; align-items:center; justify-content:center; padding:2rem; min-height:calc(100vh - 60px); }
     .auth-box { width:100%; max-width:460px; }
     .auth-logo { text-align:center; margin-bottom:2rem; }
@@ -17,6 +17,7 @@
     .auth-footer { text-align:center; margin-top:1.25rem; font-size:.88rem; color:var(--ink-soft); }
     .auth-footer a { color:var(--accent2); font-weight:600; text-decoration:none; }
     .form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    @media(max-width:480px) { .form-row { grid-template-columns:1fr; } }
 </style>
 {% endblock %}
 
@@ -30,37 +31,56 @@
         <div class="auth-card">
             <h2>Create an account 🎓</h2>
             <form method="POST" action="{{ url_for('signup') }}">
+
                 <div class="form-group">
                     <label for="name">Full Name</label>
-                    <input type="text" id="name" name="name" placeholder="e.g. Kavya Pant" required>
+                    <input type="text" id="name" name="name"
+                           placeholder="e.g. Kavya Pant" required autocomplete="name">
                 </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="enrollment_no">Enrollment Number</label>
-                        <input type="text" id="enrollment_no" name="enrollment_no" placeholder="e.g. 22BCA001" required>
+                        <input type="text" id="enrollment_no" name="enrollment_no"
+                               placeholder="e.g. 22BCA001" required
+                               style="text-transform:uppercase;">
                     </div>
                     <div class="form-group">
                         <label for="academic_unit">Academic Unit</label>
+                        <!--
+                            academic_units is injected by inject_globals() context processor
+                            in app.py — it contains ['Engineering','Biosciences','Management']
+                        -->
                         <select id="academic_unit" name="academic_unit" required>
-                            <option value="">— Select —</option>
+                            <option value="" disabled selected>— Select —</option>
                             {% for unit in academic_units %}
                             <option value="{{ unit }}">{{ unit }}</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
+
                 <div class="form-group">
                     <label for="email">University Email</label>
-                    <input type="email" id="email" name="email" placeholder="you@srhu.edu.in" required>
+                    <input type="email" id="email" name="email"
+                           placeholder="you@srhu.edu.in" required autocomplete="email">
                 </div>
+
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Choose a strong password" required>
+                    <input type="password" id="password" name="password"
+                           placeholder="Choose a strong password" required
+                           autocomplete="new-password" minlength="6">
                 </div>
-                <button type="submit" class="auth-submit">Send Verification Code →</button>
+
+                <button type="submit" class="auth-submit">
+                    Send Verification Code →
+                </button>
             </form>
+
             <div class="auth-footer">
-                Already have an account? <a href="{{ url_for('login') }}">Login here</a>
+                Already have an account?
+                <a href="{{ url_for('login') }}">Login here</a>
             </div>
         </div>
     </div>

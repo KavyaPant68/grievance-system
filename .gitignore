@@ -1,0 +1,3 @@
+.env
+grievance.db
+model/grievance_model.pkl

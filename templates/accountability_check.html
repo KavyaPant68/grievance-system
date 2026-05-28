@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Accountability Check — GrievanceIQ{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .check-card { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:2rem; max-width:600px; margin-bottom:2rem; }
+    .check-card h2 { font-family:'DM Serif Display',serif; font-size:1.3rem; margin-bottom:.5rem; }
+    .check-card p  { color:var(--ink-soft); font-size:.9rem; line-height:1.6; margin-bottom:1.25rem; }
+    .how-it-works { background:rgba(69,123,157,.06); border-left:4px solid var(--accent2); border-radius:6px; padding:1rem 1.25rem; margin-bottom:1.5rem; font-size:.85rem; color:var(--ink); line-height:1.7; }
+    .result-card { background:var(--white); border:1.5px solid var(--accent); border-radius:var(--radius); padding:1.5rem; margin-top:1.5rem; }
+    .result-card h3 { font-size:1rem; font-weight:700; color:var(--accent); margin-bottom:1rem; }
+    .result-none { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; text-align:center; color:var(--ink-soft); margin-top:1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+    <div style="margin-bottom:1.5rem;">
+        <a href="{{ url_for('admin_dashboard') }}" style="color:var(--ink-soft);text-decoration:none;font-size:.9rem;">← Back to Dashboard</a>
+    </div>
+
+    <h1 class="page-title">🔐 Zero-Knowledge Accountability Check</h1>
+    <p class="page-subtitle">Trace anonymous complaints without decrypting any identity.</p>
+
+    <div class="check-card">
+        <div class="how-it-works">
+            <strong>How this works:</strong><br>
+            When a student submits anonymously, their <code>user_id</code> is <strong>not stored</strong>.
+            Instead, a SHA-256 hash of their Enrollment Number + a secret pepper is saved as a
+            <code>crypto_token</code>. To check if a specific student submitted malicious complaints,
+            enter their Enrollment Number below. The system will hash it the same way and check
+            for matches — <strong>without ever exposing the real identity in any query</strong>.
+            This check is permanently logged in the audit trail.
+        </div>
+
+        <form method="POST" action="{{ url_for('accountability_check') }}">
+            <div class="form-group">
+                <label for="enrollment_no">Suspected Student's Enrollment Number</label>
+                <input type="text" id="enrollment_no" name="enrollment_no"
+                       placeholder="e.g. 22BCA001"
+                       value="{{ checked_enrollment }}"
+                       style="text-transform:uppercase;" required>
+            </div>
+            <div class="form-group">
+                <label for="reason">Reason for Check <span style="font-weight:400;color:var(--ink-soft)">(required for audit log)</span></label>
+                <textarea name="reason" id="reason" rows="2"
+                          placeholder="e.g. Faculty member reported targeted defamation campaign..."
+                          required></textarea>
+            </div>
+            <button type="submit" class="btn btn-accent">Run Accountability Check →</button>
+        </form>
+
+        {% if results is not none %}
+            {% if results %}
+            <div class="result-card">
+                <h3>⚠️ {{ results|length }} anonymous complaint(s) traced to enrollment: {{ checked_enrollment }}</h3>
+                <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;padding:.5rem .75rem;background:var(--surface);border-bottom:2px solid var(--border);font-size:.75rem;color:var(--ink-soft);text-transform:uppercase;">#</th>
+                            <th style="text-align:left;padding:.5rem .75rem;background:var(--surface);border-bottom:2px solid var(--border);font-size:.75rem;color:var(--ink-soft);text-transform:uppercase;">Title</th>
+                            <th style="text-align:left;padding:.5rem .75rem;background:var(--surface);border-bottom:2px solid var(--border);font-size:.75rem;color:var(--ink-soft);text-transform:uppercase;">Routed To</th>
+                            <th style="text-align:left;padding:.5rem .75rem;background:var(--surface);border-bottom:2px solid var(--border);font-size:.75rem;color:var(--ink-soft);text-transform:uppercase;">Status</th>
+                            <th style="text-align:left;padding:.5rem .75rem;background:var(--surface);border-bottom:2px solid var(--border);font-size:.75rem;color:var(--ink-soft);text-transform:uppercase;">Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for r in results %}
+                    <tr>
+                        <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);color:var(--ink-soft);">{{ r.id }}</td>
+                        <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);">
+                            <strong>{{ r.title }}</strong>
+                            <div style="font-size:.75rem;color:var(--ink-soft);margin-top:.1rem;">
+                                {{ r.description[:60] }}{% if r.description|length > 60 %}…{% endif %}
+                            </div>
+                        </td>
+                        <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);">
+                            {% if r.routed_to in departments %}{{ departments[r.routed_to].icon }}{% endif %}
+                            {{ r.routed_to }}
+                        </td>
+                        <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);">{{ r.status }}</td>
+                        <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);font-size:.8rem;color:var(--ink-soft);">{{ r.submitted_at }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <p style="font-size:.78rem;color:var(--ink-soft);margin-top:1rem;">
+                    This check has been logged with your name, the enrollment number entered,
+                    and your stated reason. Use this data through official disciplinary channels.
+                </p>
+            </div>
+            {% else %}
+            <div class="result-none">
+                <div style="font-size:2rem;margin-bottom:.5rem;">✅</div>
+                <p>No anonymous complaints found for enrollment number <strong>{{ checked_enrollment }}</strong>.</p>
+                <p style="font-size:.82rem;margin-top:.3rem;">This check has been logged in the audit trail.</p>
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

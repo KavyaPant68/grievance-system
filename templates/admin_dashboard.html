@@ -46,8 +46,6 @@
     .detail-link:hover { text-decoration:underline; }
     .upvote-bubble { display:inline-flex; align-items:center; gap:.25rem; background:#fee2e2; color:#991b1b; font-size:.72rem; font-weight:700; padding:2px 7px; border-radius:10px; }
     .masked-identity { color:var(--ink-soft); font-style:italic; font-size:.85rem; }
-    .reveal-btn { background:none; border:1px solid var(--accent); color:var(--accent); border-radius:6px; padding:.2rem .5rem; font-size:.72rem; cursor:pointer; font-family:'DM Sans',sans-serif; margin-left:.4rem; }
-    .reveal-btn:hover { background:rgba(230,57,70,.08); }
 </style>
 {% endblock %}
 
@@ -63,11 +61,18 @@
         </div>
     </div>
     {% else %}
-    <div style="margin-bottom:.25rem;">
-        <h1 class="page-title">⭐ Super Admin Dashboard</h1>
+<div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:.25rem;">
+    <div>
+        <h1 class="page-title">⭐ Central Admin Dashboard</h1>
         <p class="page-subtitle">All complaints across every department.</p>
     </div>
-    {% endif %}
+    <a href="{{ url_for('accountability_check') }}"
+       class="btn btn-outline btn-sm"
+       style="border-color:var(--accent2); color:var(--accent2); margin-top:.4rem;">
+        🔐 Accountability Check
+    </a>
+</div>
+{% endif %}
 
     <!-- Stats -->
     <div class="stats-grid">
@@ -155,8 +160,6 @@
                                 <!-- Superadmin sees real name + reveal button -->
                                 <div style="margin-top:.2rem;">
                                     <span style="font-size:.7rem;background:#1a1a2e;color:#fff;padding:2px 6px;border-radius:6px;">🔒 Anonymous</span>
-                                    <button class="reveal-btn"
-                                        onclick="openRevealModal({{ c.id }})">Reveal ▸</button>
                                 </div>
                             {% endif %}
                         {% endif %}
@@ -327,27 +330,8 @@
     </div>
 </div>
 
-<!-- REVEAL IDENTITY MODAL (superadmin only) -->
-{% if is_super %}
-<div class="modal-overlay" id="reveal-modal">
-    <div class="modal">
-        <h3>🔓 Reveal Anonymous Identity</h3>
-        <p style="font-size:.88rem;color:var(--ink-soft);margin-bottom:1.25rem;">
-            This action is logged permanently in the audit trail. Please provide a reason.
-        </p>
-        <form method="POST" action="" id="reveal-form">
-            <div class="form-group">
-                <label>Reason for Revealing Identity</label>
-                <textarea name="reason" placeholder="e.g. Repeated spam complaints detected from this source..." required></textarea>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-outline" onclick="closeModal('reveal-modal')">Cancel</button>
-                <button type="submit" class="btn btn-accent">Reveal & Log</button>
-            </div>
-        </form>
-    </div>
-</div>
-{% endif %}
+
+  
 
 <script>
 function openStatusModal(id, status, remark, deadline) {
@@ -366,10 +350,7 @@ function openReroute(id, currentDept, currentCCs) {
     }
     document.getElementById('reroute-modal').classList.add('open');
 }
-function openRevealModal(id) {
-    document.getElementById('reveal-form').action = '/admin/reveal_identity/' + id;
-    document.getElementById('reveal-modal').classList.add('open');
-}
+
 function closeModal(id) {
     document.getElementById(id).classList.remove('open');
 }
@@ -379,10 +360,5 @@ document.getElementById('status-modal').addEventListener('click', function(e) {
 document.getElementById('reroute-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal('reroute-modal');
 });
-{% if is_super %}
-document.getElementById('reveal-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeModal('reveal-modal');
-});
-{% endif %}
 </script>
 {% endblock %}

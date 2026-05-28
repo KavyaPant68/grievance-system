@@ -21,8 +21,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from ai_classifier import classify
 
-app = Flask(__name__)
-app.secret_key = 'grievance_secret_key_2024'
+
 
 # ─────────────────────────────────────────────
 # CRYPTOGRAPHIC CONFIGURATION
@@ -33,7 +32,16 @@ app.secret_key = 'grievance_secret_key_2024'
 # no one can reverse-engineer which enrollment number maps to which complaint
 # without knowing this exact string.
 # In production: load from environment variable → os.environ.get('SECRET_PEPPER')
-SECRET_PEPPER = 'GrievanceIQ@SRHU#CryptoSalt$2024!DoNotShare'
+from dotenv import load_dotenv
+load_dotenv()  # reads .env file automatically
+
+app = Flask(__name__)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev_fallback_key')
+
+SECRET_PEPPER = os.environ.get('SECRET_PEPPER', 'fallback_pepper')
+
+SMTP_EMAIL    = os.environ.get('SMTP_EMAIL', '')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
 
 def generate_crypto_token(enrollment_no: str) -> str:
     """
@@ -74,8 +82,6 @@ def generate_crypto_token(enrollment_no: str) -> str:
 
 SMTP_SERVER        = 'smtp.gmail.com'
 SMTP_PORT          = 587
-SMTP_EMAIL         = 'your_app_email@gmail.com'       # ← replace with your Gmail
-SMTP_PASSWORD      = 'bvmrdclwgfrtitf'      # ← replace with App Password
 OTP_EXPIRY_MINUTES = 10
 
 def send_otp_email(recipient_email: str, otp_code: str, student_name: str) -> bool:
@@ -613,18 +619,45 @@ def logout():
 def student_dashboard():
     if 'user_id' not in session or session['user_role'] != 'student':
         return redirect(url_for('login'))
+
     check_overdue_complaints()
+
     conn = get_db()
+
+    # Generate token for logged-in student
+    my_token = generate_crypto_token(session['enrollment_no'])
+
+    # Fetch:
+    # 1. Normal complaints using user_id
+    # 2. Anonymous complaints using crypto_token
     complaints = conn.execute(
-        'SELECT * FROM complaints WHERE user_id=? ORDER BY submitted_at DESC',
-        (session['user_id'],)
+        '''
+        SELECT *
+        FROM complaints
+        WHERE user_id = ?
+           OR crypto_token = ?
+        ORDER BY submitted_at DESC
+        ''',
+        (session['user_id'], my_token)
     ).fetchall()
+
     conn.close()
-    stats = {'Pending':0,'In Progress':0,'Resolved':0}
+
+    stats = {
+        'Pending': 0,
+        'In Progress': 0,
+        'Resolved': 0
+    }
+
     for c in complaints:
         if c['status'] in stats:
             stats[c['status']] += 1
-    return render_template('student_dashboard.html', complaints=complaints, stats=stats)
+
+    return render_template(
+        'student_dashboard.html',
+        complaints=complaints,
+        stats=stats
+    )
 
 @app.route('/submit', methods=['GET','POST'])
 def submit_complaint():
@@ -646,12 +679,22 @@ def submit_complaint():
             return render_template('submit_complaint.html')
 
         # Rate limit: max 3 complaints per 24 hours
+        # Uses crypto_token for anonymous (user_id is NULL for them, so old check was bypassable)
         conn = get_db()
-        recent_count = conn.execute(
-            """SELECT COUNT(*) as cnt FROM complaints
-               WHERE user_id=? AND submitted_at > datetime('now','-24 hours')""",
-            (session['user_id'],)
-        ).fetchone()['cnt']
+        is_anonymous_check = 1 if request.form.get('is_anonymous') == 'on' else 0
+        if is_anonymous_check:
+               my_token     = generate_crypto_token(session.get('enrollment_no', ''))
+               recent_count = conn.execute(
+                     """SELECT COUNT(*) as cnt FROM complaints
+                     WHERE crypto_token=? AND submitted_at > datetime('now','-24 hours')""",
+                  (my_token,)
+                ).fetchone()['cnt']
+        else:
+            recent_count = conn.execute(
+                  """SELECT COUNT(*) as cnt FROM complaints
+                  WHERE user_id=? AND submitted_at > datetime('now','-24 hours')""",
+                 (session['user_id'],)
+            ).fetchone()['cnt']
 
         if recent_count >= 3:
             conn.close()
@@ -1230,9 +1273,42 @@ def suspend_user(uid):
     return redirect(url_for('admin_dashboard'))
 
 # ─────────────────────────────────────────────
+# GLOBAL ML MODEL LOADING (LOAD ONLY ONCE)
+# ─────────────────────────────────────────────
+
+MODEL_PIPELINE = None
+TFIDF_VECTORIZER = None
+
+
+def load_duplicate_detection_model():
+
+    global MODEL_PIPELINE
+    global TFIDF_VECTORIZER
+
+    model_path = os.path.join('model', 'grievance_model.pkl')
+
+    if not os.path.exists(model_path):
+        print("⚠ Duplicate detection model not found.")
+        return
+
+    try:
+        with open(model_path, 'rb') as f:
+            MODEL_PIPELINE = pickle.load(f)
+
+        TFIDF_VECTORIZER = MODEL_PIPELINE.named_steps['tfidf']
+
+        print("✅ Duplicate detection model loaded successfully.")
+
+    except Exception as e:
+        print(f"❌ Error loading duplicate model: {e}")
+
+
+# ─────────────────────────────────────────────
 # DUPLICATE DETECTION HELPER
 # ─────────────────────────────────────────────
+
 def check_duplicate(new_text, new_dept, user_academic_unit, conn):
+
     candidates = conn.execute(
         '''SELECT c.id, c.title, c.description
            FROM complaints c
@@ -1250,24 +1326,33 @@ def check_duplicate(new_text, new_dept, user_academic_unit, conn):
     if not candidates:
         return False, None, 0.0
 
-    model_path = os.path.join('model','grievance_model.pkl')
-    if not os.path.exists(model_path):
+    if TFIDF_VECTORIZER is None:
+        print("⚠ TF-IDF vectorizer unavailable.")
         return False, None, 0.0
 
-    with open(model_path,'rb') as f:
-        pipeline = pickle.load(f)
+    try:
 
-    vectorizer = pipeline.named_steps['tfidf']
-    corpus     = [f"{r['title']} {r['description']}" for r in candidates]
-    new_vec    = vectorizer.transform([new_text])
-    exist_vecs = vectorizer.transform(corpus)
-    sims       = cosine_similarity(new_vec, exist_vecs)[0]
-    max_idx    = int(np.argmax(sims))
-    max_score  = float(sims[max_idx])
+        corpus = [
+            f"{r['title']} {r['description']}"
+            for r in candidates
+        ]
 
-    if max_score >= 0.75:
-        return True, candidates[max_idx]['id'], max_score
-    return False, None, 0.0
+        new_vec = TFIDF_VECTORIZER.transform([new_text])
+        exist_vecs = TFIDF_VECTORIZER.transform(corpus)
+
+        sims = cosine_similarity(new_vec, exist_vecs)[0]
+
+        max_idx = int(np.argmax(sims))
+        max_score = float(sims[max_idx])
+
+        if max_score >= 0.75:
+            return True, candidates[max_idx]['id'], max_score
+
+        return False, None, 0.0
+
+    except Exception as e:
+        print(f"❌ Duplicate detection error: {e}")
+        return False, None, 0.0
 
 # ─────────────────────────────────────────────
 # FILE SERVING
@@ -1287,12 +1372,21 @@ def uploaded_file(filename):
     return redirect(url_for('student_dashboard'))
 
 if __name__ == '__main__':
+
+    # Initialize database
     init_db()
+
+    # Load duplicate detection model ONCE
+    load_duplicate_detection_model()
+
     print("\n✅ Database initialized.")
     print("\n📋 Login Accounts:")
     print("   Central Admin →  admin@college.edu / admin123")
+
     for key, d in DEPARTMENTS.items():
         if key != 'General':
             print(f"   {d['label']:<22} →  {d['email']}")
+
     print("\n🚀 Starting server at http://127.0.0.1:5000\n")
+
     app.run(debug=True)
