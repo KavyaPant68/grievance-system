@@ -57,14 +57,23 @@
                     </div>
                 </div>
                 <!-- Upvote button -->
+                 {% if c.id in upvoted_ids %}
+                    <button type="button"
+                            class="upvote-btn voted"
+                            disabled
+                            title="Already upvoted"
+                            style="cursor:not-allowed; opacity:.7;">
+                      <span class="arrow">▲</span>
+                      <span class="count">{{ c.upvote_count }}</span>
+                    </button>
+                {% else %}
                 <form method="POST" action="{{ url_for('upvote_complaint', cid=c.id) }}">
-                    <button type="submit"
-                            class="upvote-btn {% if c.id in upvoted_ids %}voted{% endif %}"
-                            {% if c.id in upvoted_ids %}title="Already upvoted"{% endif %}>
+                    <button type="submit" class="upvote-btn" title="Upvote this issue">
                         <span class="arrow">▲</span>
                         <span class="count">{{ c.upvote_count }}</span>
                     </button>
                 </form>
+              {% endif %}
             </div>
 
             <p class="feed-desc">
