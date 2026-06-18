@@ -17,7 +17,6 @@ import sqlite3, os, uuid, random, smtplib, pickle, hashlib
 from datetime import datetime, date
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from ai_classifier import classify
 
@@ -659,10 +658,44 @@ def student_dashboard():
         stats=stats
     )
 
+def safe_classify(title, description, category):
+    try:
+        from ai_classifier import classify
+        return classify(title, description, category)
+    except Exception as e:
+        print(f"[AI] classify() failed — {e}")
+        return {
+            'category':     category,
+            'routed_to':    category if category in DEPARTMENTS else 'General',
+            'confidence':   0.0,
+            'source':       'keyword_fallback',
+            'mismatch_msg': None,
+        }
+
 @app.route('/submit', methods=['GET','POST'])
 def submit_complaint():
     if 'user_id' not in session or session['user_role'] != 'student':
         return redirect(url_for('login'))
+
+    # Check rate limit before even showing the form
+    if request.method == 'GET':
+        conn = get_db()
+        my_token     = generate_crypto_token(session.get('enrollment_no', ''))
+        named_count  = conn.execute(
+            """SELECT COUNT(*) as cnt FROM complaints
+               WHERE user_id=? AND submitted_at > datetime('now','-24 hours')""",
+            (session['user_id'],)
+        ).fetchone()['cnt']
+        anon_count   = conn.execute(
+            """SELECT COUNT(*) as cnt FROM complaints
+               WHERE crypto_token=? AND submitted_at > datetime('now','-24 hours')""",
+            (my_token,)
+        ).fetchone()['cnt']
+        conn.close()
+        total_today  = named_count + anon_count
+        if total_today >= 3:
+            flash('You have reached the limit of 3 complaints per 24 hours. Please try again tomorrow.', 'error')
+            return redirect(url_for('student_dashboard'))
 
     if request.method == 'POST':
         title         = request.form['title'].strip()
@@ -701,7 +734,7 @@ def submit_complaint():
             flash('You have reached the submission limit of 3 complaints per 24 hours.', 'error')
             return redirect(url_for('student_dashboard'))
 
-        result = classify(title, description, category)
+        result = safe_classify(title, description, category)
 
         # ── Determine identity storage strategy ───────────────────
         if is_anonymous:
@@ -717,32 +750,6 @@ def submit_complaint():
             crypto_token  = None
             db_user_id    = session['user_id']
 
-        # ── Duplicate detection (public complaints only) ───────────
-        if is_public and academic_unit:
-            new_text = f"{title} {description}"
-            is_dup, dup_id, score = check_duplicate(
-                new_text, result['routed_to'], academic_unit, conn
-            )
-            if is_dup:
-                try:
-                    conn.execute(
-                        'INSERT OR IGNORE INTO complaint_upvotes (complaint_id,user_id,upvoted_at) VALUES (?,?,?)',
-                        (dup_id, session['user_id'], datetime.now().strftime('%Y-%m-%d %H:%M')))
-                    conn.execute(
-                        'UPDATE complaints SET upvote_count = upvote_count + 1 WHERE id=?', (dup_id,))
-                    conn.commit()
-                    dup_count = conn.execute(
-                        'SELECT upvote_count FROM complaints WHERE id=?', (dup_id,)
-                    ).fetchone()['upvote_count']
-                    conn.close()
-                    flash(
-                        f'A similar complaint already exists ({score*100:.0f}% match). '
-                        f'Your vote has been added — {dup_count} student(s) affected.',
-                        'warning'
-                    )
-                    return redirect(url_for('public_feed'))
-                except Exception:
-                    pass
 
         # Save the complaint
         conn.execute(
@@ -1276,83 +1283,6 @@ def suspend_user(uid):
 # GLOBAL ML MODEL LOADING (LOAD ONLY ONCE)
 # ─────────────────────────────────────────────
 
-MODEL_PIPELINE = None
-TFIDF_VECTORIZER = None
-
-
-def load_duplicate_detection_model():
-
-    global MODEL_PIPELINE
-    global TFIDF_VECTORIZER
-
-    model_path = os.path.join('model', 'grievance_model.pkl')
-
-    if not os.path.exists(model_path):
-        print("⚠ Duplicate detection model not found.")
-        return
-
-    try:
-        with open(model_path, 'rb') as f:
-            MODEL_PIPELINE = pickle.load(f)
-
-        TFIDF_VECTORIZER = MODEL_PIPELINE.named_steps['tfidf']
-
-        print("✅ Duplicate detection model loaded successfully.")
-
-    except Exception as e:
-        print(f"❌ Error loading duplicate model: {e}")
-
-
-# ─────────────────────────────────────────────
-# DUPLICATE DETECTION HELPER
-# ─────────────────────────────────────────────
-
-def check_duplicate(new_text, new_dept, user_academic_unit, conn):
-
-    candidates = conn.execute(
-        '''SELECT c.id, c.title, c.description
-           FROM complaints c
-           LEFT JOIN users u ON c.user_id=u.id
-           WHERE c.routed_to=?
-             AND c.academic_unit=?
-             AND c.submitted_at > datetime('now','-30 days')
-             AND c.duplicate_of IS NULL
-             AND c.is_public=1
-             AND c.status != 'Resolved'
-           LIMIT 50''',
-        (new_dept, user_academic_unit)
-    ).fetchall()
-
-    if not candidates:
-        return False, None, 0.0
-
-    if TFIDF_VECTORIZER is None:
-        print("⚠ TF-IDF vectorizer unavailable.")
-        return False, None, 0.0
-
-    try:
-
-        corpus = [
-            f"{r['title']} {r['description']}"
-            for r in candidates
-        ]
-
-        new_vec = TFIDF_VECTORIZER.transform([new_text])
-        exist_vecs = TFIDF_VECTORIZER.transform(corpus)
-
-        sims = cosine_similarity(new_vec, exist_vecs)[0]
-
-        max_idx = int(np.argmax(sims))
-        max_score = float(sims[max_idx])
-
-        if max_score >= 0.75:
-            return True, candidates[max_idx]['id'], max_score
-
-        return False, None, 0.0
-
-    except Exception as e:
-        print(f"❌ Duplicate detection error: {e}")
-        return False, None, 0.0
 
 # ─────────────────────────────────────────────
 # FILE SERVING
@@ -1375,9 +1305,6 @@ if __name__ == '__main__':
 
     # Initialize database
     init_db()
-
-    # Load duplicate detection model ONCE
-    load_duplicate_detection_model()
 
     print("\n✅ Database initialized.")
     print("\n📋 Login Accounts:")

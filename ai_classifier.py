@@ -34,7 +34,7 @@ KEYWORD_FALLBACK = {
                   'challan','bank','dues','tuition','transaction','demand note'],
 }
 
-CONFIDENCE_THRESHOLD = 0.45   # below this → flag as uncertain even if correct dept
+CONFIDENCE_THRESHOLD = 0.70   # below this → flag as uncertain even if correct dept
 
 MODEL_PATH = os.path.join('model', 'grievance_model.pkl')
 
