@@ -1,3 +1,12 @@
+# Python bytecode cache
+__pycache__/
+*.pyc
+
+# Local Databases
+*.db
+
+# Student uploads folder
+uploads/
+
+# Environment files holding secrets
 .env
-grievance.db
-model/grievance_model.pkl
