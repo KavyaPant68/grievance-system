@@ -10,3 +10,4 @@ uploads/
 
 # Environment files holding secrets
 .env
+app.py

@@ -219,8 +219,7 @@ def init_db():
         password        TEXT    NOT NULL,
         role            TEXT    NOT NULL DEFAULT 'student',
         department      TEXT    DEFAULT NULL,
-        academic_unit   TEXT    DEFAULT NULL,
-        is_suspended    INTEGER DEFAULT 0
+        academic_unit   TEXT    DEFAULT NULL
     )''')
 
     # complaints table:
@@ -283,19 +282,6 @@ def init_db():
         created_at   TEXT    NOT NULL,
         FOREIGN KEY(user_id)      REFERENCES users(id),
         FOREIGN KEY(complaint_id) REFERENCES complaints(id)
-    )''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS ai_feedback (
-        id               INTEGER PRIMARY KEY AUTOINCREMENT,
-        complaint_id     INTEGER NOT NULL,
-        complaint_text   TEXT    NOT NULL,
-        ai_predicted     TEXT    NOT NULL,
-        correct_label    TEXT    NOT NULL,
-        corrected_by     INTEGER NOT NULL,
-        corrected_at     TEXT    NOT NULL,
-        used_in_training INTEGER DEFAULT 0,
-        FOREIGN KEY(complaint_id) REFERENCES complaints(id),
-        FOREIGN KEY(corrected_by) REFERENCES users(id)
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS complaint_upvotes (
@@ -435,10 +421,6 @@ def login():
         conn = get_db()
         user = conn.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
         conn.close()
-
-        if user and user['is_suspended']:
-            flash('Your account has been suspended. Contact the Central Admin.', 'error')
-            return render_template('login.html')
 
         if user and check_password_hash(user['password'], password):
             session['user_id']         = user['id']
@@ -1072,38 +1054,11 @@ def complaint_detail(cid):
     ).fetchall()
     cc_rows  = conn.execute('SELECT cc_dept FROM complaint_cc WHERE complaint_id=?', (cid,)).fetchall()
     cc_depts = [r['cc_dept'] for r in cc_rows]
-    existing_feedback = conn.execute('SELECT * FROM ai_feedback WHERE complaint_id=?', (cid,)).fetchone()
     conn.close()
 
     return render_template('complaint_detail.html',
         c=c, reroutes=reroutes, cc_depts=cc_depts,
-        role=role, existing_feedback=existing_feedback)
-
-@app.route('/complaint/<int:cid>/feedback', methods=['POST'])
-def submit_ai_feedback(cid):
-    if 'user_id' not in session or session['user_role'] not in ('admin','superadmin'):
-        return redirect(url_for('login'))
-    correct_label = request.form.get('correct_label','').strip()
-    if not correct_label or correct_label not in DEPARTMENTS:
-        flash('Please select a valid department.', 'error')
-        return redirect(url_for('complaint_detail', cid=cid))
-    conn = get_db()
-    c = conn.execute('SELECT * FROM complaints WHERE id=?', (cid,)).fetchone()
-    existing = conn.execute('SELECT id FROM ai_feedback WHERE complaint_id=?', (cid,)).fetchone()
-    if existing:
-        flash('Feedback already submitted for this complaint.', 'warning')
-        conn.close()
-        return redirect(url_for('complaint_detail', cid=cid))
-    conn.execute(
-        '''INSERT INTO ai_feedback
-           (complaint_id,complaint_text,ai_predicted,correct_label,corrected_by,corrected_at,used_in_training)
-           VALUES (?,?,?,?,?,?,0)''',
-        (cid, f"{c['title']} {c['description']}", c['ai_category'],
-         correct_label, session['user_id'], datetime.now().strftime('%Y-%m-%d %H:%M')))
-    conn.commit()
-    conn.close()
-    flash('AI correction saved. Model will learn this on next retraining.', 'success')
-    return redirect(url_for('complaint_detail', cid=cid))
+        role=role)
 
 # ─────────────────────────────────────────────
 # ADMIN ROUTES
@@ -1266,23 +1221,6 @@ def reroute_complaint(cid):
     conn.close()
     flash(f'Complaint #{cid} re-routed from {from_label} → {to_label}.', 'success')
     return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/suspend/<int:uid>', methods=['POST'])
-def suspend_user(uid):
-    if session.get('user_role') != 'superadmin':
-        flash('Only Central Admin can suspend accounts.', 'error')
-        return redirect(url_for('admin_dashboard'))
-    conn = get_db()
-    conn.execute('UPDATE users SET is_suspended=1 WHERE id=?', (uid,))
-    conn.commit()
-    conn.close()
-    flash('User account has been suspended.', 'warning')
-    return redirect(url_for('admin_dashboard'))
-
-# ─────────────────────────────────────────────
-# GLOBAL ML MODEL LOADING (LOAD ONLY ONCE)
-# ─────────────────────────────────────────────
-
 
 # ─────────────────────────────────────────────
 # FILE SERVING

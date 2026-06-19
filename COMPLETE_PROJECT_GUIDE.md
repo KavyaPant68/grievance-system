@@ -35,7 +35,6 @@ The platform combines:
 - Role-based access control
 - Anonymous complaint submission
 - Public issue aggregation through upvoting
-- Administrative analytics and monitoring
 
 The goal is to reduce manual complaint handling effort while improving transparency, accountability, and response efficiency.
 
@@ -49,7 +48,6 @@ The goal is to reduce manual complaint handling effort while improving transpare
 - Protect student privacy during sensitive reporting.
 - Provide transparency through complaint tracking.
 - Enable collective issue reporting using public feeds.
-- Generate actionable analytics for administrators.
 
 ---
 
@@ -79,8 +77,7 @@ Grievance/
     ├── public_feed.html
     ├── complaint_detail.html
     ├── admin_dashboard.html
-    ├── accountability_check.html
-    └── admin_analytics.html
+    └── accountability_check.html
 ```
 
 ---
@@ -193,10 +190,6 @@ Supported roles:
 - Department Admin
 - Central Admin
 
-## Account Suspension
-
-Administrators can suspend accounts to prevent misuse.
-
 ## AI-Based Complaint Routing
 
 Complaint text is analyzed and automatically assigned to the most suitable department.
@@ -216,11 +209,6 @@ Public complaints can be viewed by students.
 ## Upvoting
 
 Students can upvote public complaints to indicate common issues.
-
-## Analytics Dashboard
-
-Provides complaint statistics and operational insights.
-
 ---
 
 # 8. Database Design
@@ -236,7 +224,6 @@ Provides complaint statistics and operational insights.
 | enrollment_no | Student Enrollment |
 | academic_unit | Department |
 | role | Access Role |
-| is_suspended | Suspension Flag |
 
 ## Complaints Table
 
@@ -261,7 +248,6 @@ Provides complaint statistics and operational insights.
 ## Supporting Tables
 
 - complaint_upvotes
-- ai_feedback
 - status_audit_log
 - reroute_log
 - notifications
@@ -295,7 +281,6 @@ Provides complaint statistics and operational insights.
 2. Status updated.
 3. Audit log generated.
 4. Notification generated.
-5. Analytics updated.
 
 ---
 
